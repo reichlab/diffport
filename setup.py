@@ -16,6 +16,7 @@ setup(
     install_requires=["docopt", "dataset", "jinja2"],
     keywords="",
     packages=find_packages(),
+    entry_points={"console_scripts": ["diffport=diffport.cli:main"]},
     classifiers=(
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Natural Language :: English",
