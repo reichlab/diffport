@@ -6,6 +6,7 @@ python:
 
 install:
   - "python setup.py develop"
+  - "pip install pipenv"
   - "pipenv install --dev"
 
 script:
