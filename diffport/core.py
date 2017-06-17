@@ -33,7 +33,7 @@ class Diffport:
         self.init_store()
 
     def init_store(self):
-        store_path = self.config_dir.joinpath("diffport")
+        store_path = self.config_dir.joinpath("diffport.d")
         snapshots_path = store_path.joinpath("snapshots")
         snapshots_path.mkdir(parents=True, exist_ok=True)
 
