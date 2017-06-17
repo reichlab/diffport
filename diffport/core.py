@@ -91,9 +91,7 @@ class Diffport:
         Remove given snapshot
         """
 
-        # TODO: Confirm on cli side
-        # TODO: remove snapshot file
-
+        self.snapshots_path.joinpath(snap_hash).unlink()
         self._index = [it for it in self._index if it["hash"] != snap_hash]
         self.write_index()
 
