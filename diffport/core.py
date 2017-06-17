@@ -2,9 +2,13 @@
 Core things
 """
 
+import colorama # type: ignore
 import hashlib
 import json
 import yaml
+import time
+from colorama import Fore, Back, Style
+from datetime import datetime
 from pathlib import Path
 from .watchers import Watcher
 
@@ -14,48 +18,97 @@ WATCHER_MAP = {
 }
 
 
+# Colored prints
+colorama.init(autoreset=True)
+
+def err(text, end="\n"):
+    print(Fore.RED + Style.BRIGHT + text, end=end)
+
+def info(text, end="\n"):
+    print(Fore.BLUE + Style.BRIGHT + text, end=end)
+
+def warn(text, end="\n"):
+    print(Fore.YELLOW + Style.BRIGHT + text, end=end)
+
+
 # Exceptions
 class ConfigError(Exception):
     pass
+
 
 class Diffport:
     def __init__(self, config_file: Path) -> None:
         if not config_file.is_file():
             raise ConfigError("Config file not found")
 
-        with config_file.open() as f:
-            self._config = yaml.load(f)
+        with config_file.open() as fp:
+            self._config = yaml.load(fp)
 
         if "db" not in self._config:
             raise ConfigError("`db` not in config")
 
         self.config_dir = config_file.parent
+        self.store_path = self.config_dir.joinpath("diffport.d")
+        self.index_path = self.store_path.joinpath("index")
+        self.snapshots_path = self.store_path.joinpath("snapshots")
         self.init_store()
 
     def init_store(self):
-        store_path = self.config_dir.joinpath("diffport.d")
-        snapshots_path = store_path.joinpath("snapshots")
-        snapshots_path.mkdir(parents=True, exist_ok=True)
+        """
+        Initialize store and create stubs
+        """
 
-        index_path = store_path.joinpath("index")
-
-        if not index_path.is_file():
-            default_index = []
-            with index_path.open("w") as fp:
-                yaml.dump(default_index, fp)
-            self._index = default_index
+        self.snapshots_path.mkdir(parents=True, exist_ok=True)
+        if not self.index_path.is_file():
+            self._index = []
+            self.write_index()
         else:
-            with index_path.open() as fp:
+            with self.index_path.open() as fp:
                 self._index = yaml.load(fp)
 
+    def write_index(self):
+        """
+        Write index content back to file
+        """
+
+        with self.index_path.open("w") as fp:
+            yaml.dump(self._index, fp)
+
     def take_snapshot(self, identifier=None):
-        pass
+        # TODO: save snapshot
+        # Insert info in index
+        it = {
+            "hash": snap.hash,
+            "time": int(time.time())
+        }
+        if identifier:
+            it["identifier"] = identifier
+        self._index.append(it)
+        self.write_index()
 
     def remove_snapshot(self, snap_hash):
-        pass
+        """
+        Remove given snapshot
+        """
+
+        # TODO: Confirm on cli side
+        # TODO: remove snapshot file
+
+        self._index = [it for it in self._index if it["hash"] != snap_hash]
+        self.write_index()
 
     def list_snapshots(self):
-        pass
+        if len(self._index) == 0:
+            err("No snaphots found")
+        else:
+            print()
+            sorted_snaps = sorted(self._index, key=lambda x: x["time"], reverse=True)
+            for it in sorted_snaps:
+                time_str = datetime.fromtimestamp(it["time"]).strftime("%Y-%m-%d %H:%M:%S")
+                info("hash: {}".format(it["hash"]))
+                print("time: {}\n".format(time_str))
+                if "identifier" in it:
+                    print("\t{}\n".format(it["identifier"]))
 
     def diff(self):
         pass

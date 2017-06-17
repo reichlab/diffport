@@ -14,7 +14,7 @@ Command Line::
     diff                 Return diff summary for the two snapshots
 
   Options:
-    --config=CFG         Configuration file [default: ./.diffport.yaml]
+    --config=CFG         Configuration file [default: ./diffport.yaml]
     -h, --help           Open help
     -v, --version        Show version
 """
