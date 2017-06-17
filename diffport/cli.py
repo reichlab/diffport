@@ -31,7 +31,9 @@ def main():
     if args["save"]:
         diffp.take_snapshot(args["--identifier"])
     elif args["rm"] or args["remove"]:
-        diffp.remove_snapshot(args["<snap-hash>"])
+        reply = input("Are you sure? [y/n] : ").lower().strip()
+        if reply[0] == "y":
+            diffp.remove_snapshot(args["<snap-hash>"])
     elif args["ls"] or args["list"]:
         diffp.list_snapshots()
     elif args["diff"]:
