@@ -11,19 +11,19 @@ class Store(ABC):
 
     @abstractmethod
     def get_snapshot(self, snap_hash):
-        pass
+        ...
 
     @abstractmethod
     def get_index(self):
-        pass
+        ...
 
     @abstractmethod
     def add_snapshot(self, snap):
-        pass
+        ...
 
     @abstractmethod
     def remove_snapshot(self, snap_hash):
-        pass
+        ...
 
 class StoreDirectory(Store):
     """

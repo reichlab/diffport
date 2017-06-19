@@ -13,14 +13,32 @@ class WatcherError(Exception):
 
 class Watcher(ABC):
 
+    @staticmethod
     @abstractmethod
-    def take_snapshot(self, config):
-        """
-        Take snapshot and return Snapshot object for current watcher
-        """
+    def take_snapshot(db_config):
+        ...
 
+    @staticmethod
+    @abstractmethod
+    def diff(a, b):
+        ...
+
+class WatcherNumberOfRows(Watcher):
+
+    @staticmethod
+    def take_snapshot(db_config):
+        return {"12": "ererere"}
+
+    @staticmethod
+    def diff(a, b):
         pass
 
-    @abstractmethod
-    def diff(self, other):
+class WatcherTablesInSchema(Watcher):
+
+    @staticmethod
+    def take_snapshot(db_config):
+        return {"12": "sdsds"}
+
+    @staticmethod
+    def diff(a, b):
         pass
