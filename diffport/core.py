@@ -11,6 +11,7 @@ from colorama import Fore, Back, Style
 from datetime import datetime
 from pathlib import Path
 from .watchers import Watcher
+from .store import StoreDirectory
 
 
 WATCHER_MAP = {
@@ -47,69 +48,39 @@ class Diffport:
         if "db" not in self._config:
             raise ConfigError("`db` not in config")
 
-        self.config_dir = config_file.parent
-        self.store_path = self.config_dir.joinpath("diffport.d")
-        self.index_path = self.store_path.joinpath("index")
-        self.snapshots_path = self.store_path.joinpath("snapshots")
-        self.init_store()
-
-    def init_store(self):
-        """
-        Initialize store and create stubs
-        """
-
-        self.snapshots_path.mkdir(parents=True, exist_ok=True)
-        if not self.index_path.is_file():
-            self._index = []
-            self.write_index()
-        else:
-            with self.index_path.open() as fp:
-                self._index = yaml.load(fp)
-
-    def write_index(self):
-        """
-        Write index content back to file
-        """
-
-        with self.index_path.open("w") as fp:
-            yaml.dump(self._index, fp)
+        self.store = StoreDirectory(config_file.parent.joinpath("diffport.d"))
+        self.index = self.store.get_index()
 
     def take_snapshot(self, identifier=None):
         # TODO: save snapshot
-        # Insert info in index
-        it = {
-            "hash": snap.hash,
-            "time": int(time.time())
+        snap = {
+            "hash": "",
+            "time": int(time.time()),
+            "items": ""
         }
         if identifier:
-            it["identifier"] = identifier
-        self._index.append(it)
-        self.write_index()
+            snap["identifier"] = identifier
+
+        if snap["hash"] in [item["hash"] for item in self.index]:
+            warn("Snapshot {} already exists, skipping".format(snap["hash"]))
+        else:
+            self.store.add_snapshot(snap)
 
     def remove_snapshot(self, snap_hash):
-        """
-        Remove given snapshot
-        """
-
-        self.snapshots_path.joinpath(snap_hash).unlink()
-        self._index = [it for it in self._index if it["hash"] != snap_hash]
-        self.write_index()
+        self.store.remove_snapshot(snap_hash)
 
     def list_snapshots(self):
-        if len(self._index) == 0:
+        if len(self.index) == 0:
             err("No snaphots found")
         else:
             print()
-            sorted_snaps = sorted(self._index, key=lambda x: x["time"], reverse=True)
+            sorted_snaps = sorted(self.index, key=lambda x: x["time"], reverse=True)
             for it in sorted_snaps:
                 time_str = datetime.fromtimestamp(it["time"]).strftime("%Y-%m-%d %H:%M:%S")
                 info("hash: {}".format(it["hash"]))
                 print("time: {}\n".format(time_str))
                 if "identifier" in it:
                     print("\t{}\n".format(it["identifier"]))
-
-    def diff(self):
-        pass
 
 
 class Snapshot:

@@ -2,6 +2,8 @@
 Modules for watchers
 """
 
+from abc import ABC, abstractmethod
+
 # Exceptions
 class WatcherNotImplemented(Exception):
     pass
@@ -9,10 +11,9 @@ class WatcherNotImplemented(Exception):
 class WatcherError(Exception):
     pass
 
-class Watcher:
-    def __init__(self, watcher_config):
-        pass
+class Watcher(ABC):
 
+    @abstractmethod
     def take_snapshot(self, config):
         """
         Take snapshot and return Snapshot object for current watcher
@@ -20,5 +21,6 @@ class Watcher:
 
         pass
 
+    @abstractmethod
     def diff(self, other):
         pass

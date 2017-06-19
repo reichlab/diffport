@@ -17,6 +17,14 @@ class Store(ABC):
     def get_index(self):
         pass
 
+    @abstractmethod
+    def add_snapshot(self, snap):
+        pass
+
+    @abstractmethod
+    def remove_snapshot(self, snap_hash):
+        pass
+
 class StoreDirectory(Store):
     """
     Store snapshots in a directory
@@ -42,7 +50,7 @@ class StoreDirectory(Store):
         Return a thin index of items in store
         """
 
-        return [{k:v for k, v in snap if k != "items"} for snap in self.snaps]
+        return [{k:v for k, v in snap.items() if k != "items"} for snap in self.snaps]
 
     def get_snapshot(self, snap_hash):
         """
@@ -53,3 +61,14 @@ class StoreDirectory(Store):
             (snap for snap in self.snaps if snap["hash"] == snap_hash)[0]
         except IndexError:
             return None
+
+    def add_snapshot(self, snap):
+        self.snaps.append(snap)
+
+        with self.path.joinpath(str(snap["time"])).open("w") as fp:
+            yaml.dump(snap, fp)
+
+    def remove_snapshot(self, snap_hash):
+        snap_idx = next((idx for idx, it in self.snaps if it["hash"] == snap_hash))
+        self.path.joinpath(str(self.snaps[snap_idx]["time"])).unlink()
+        self.snaps.delete(snap_idx)
