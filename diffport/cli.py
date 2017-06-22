@@ -4,7 +4,7 @@ Command Line::
   Usage:
     diffport save [--identifier=ID] [--config=CFG]
     diffport (rm | remove) <snap-hash> [--config=CFG]
-    diffport (ls | list) [--config=CFG]
+    diffport (ls | list) [--json] [--config=CFG]
     diffport diff <snap-old> <snap-new> [--config=CFG]
 
   Arguments:
@@ -14,6 +14,7 @@ Command Line::
     diff                 Return diff summary for the two snapshots
 
   Options:
+    --json               Output for machines
     --config=CFG         Configuration file [default: ./diffport.yaml]
     -h, --help           Open help
     -v, --version        Show version
@@ -35,6 +36,6 @@ def main():
         if reply[0] == "y":
             diffp.remove_snapshot(args["<snap-hash>"])
     elif args["ls"] or args["list"]:
-        diffp.list_snapshots()
+        diffp.list_snapshots(args["--json"])
     elif args["diff"]:
         diffp.diff(args["<snap-old>"], args["<snap-new>"])

@@ -15,19 +15,19 @@ class Watcher(ABC):
 
     @staticmethod
     @abstractmethod
-    def take_snapshot(db_config):
+    def take_snapshot(db, config):
         ...
 
     @staticmethod
     @abstractmethod
-    def diff(a, b):
+    def diff(old, new):
         ...
 
 class WatcherNumberOfRows(Watcher):
 
     @staticmethod
-    def take_snapshot(db_config):
-        return {"12": "ererere"}
+    def take_snapshot(db, config):
+        return db[config["table"]].count()
 
     @staticmethod
     def diff(a, b):
@@ -36,8 +36,8 @@ class WatcherNumberOfRows(Watcher):
 class WatcherTablesInSchema(Watcher):
 
     @staticmethod
-    def take_snapshot(db_config):
-        return {"12": "sdsds"}
+    def take_snapshot(db, config):
+        return 0
 
     @staticmethod
     def diff(a, b):

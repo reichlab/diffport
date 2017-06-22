@@ -3,6 +3,7 @@ Core things
 """
 
 import colorama  # type: ignore
+import dataset
 import hashlib
 import json
 import yaml
@@ -47,15 +48,14 @@ class Diffport:
         with config_file.open() as fp:
             self._config = yaml.load(fp)
 
-        if "db" not in self._config:
-            raise ConfigError("`db` not in config")
+        self.db = dataset.connect()
 
         self.store = StoreDirectory(config_file.parent.joinpath("diffport.d"))
         self.index = self.store.get_index()
 
     def take_snapshot(self, identifier=None):
         items = [
-            WATCHER_MAP[watcher["name"]].take_snapshot(self._config["db"])
+            WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
             for watcher in self._config["watchers"]
         ]
 
@@ -77,7 +77,11 @@ class Diffport:
         self.store.remove_snapshot(snap_hash)
         info("Snapshot {} removed".format(snap_hash))
 
-    def list_snapshots(self):
+    def list_snapshots(self, json_output=False):
+        if json_output:
+            print(json.dumps(self.index), end="")
+            return
+
         if len(self.index) == 0:
             err("No snaphots found")
         else:
