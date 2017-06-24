@@ -13,7 +13,7 @@ setup(
     author="Abhinav Tushar",
     author_email="abhinav.tushar.vs@gmail.com",
     url=project_url,
-    install_requires=["colorama", "docopt", "dataset", "jinja2"],
+    install_requires=["colorama", "docopt", "dataset", "jinja2", "pandas", "tabulate"],
     keywords="",
     packages=find_packages(),
     entry_points={"console_scripts": ["diffport=diffport.cli:main"]},
