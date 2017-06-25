@@ -17,4 +17,4 @@ diffport
 Database summary diff reporting tool.
 
 Needs environment variable ``DATABASE_URL`` to be set as `specified
-here<https://dataset.readthedocs.io/en/latest/quickstart.html#connecting-to-a-database>`_.
+here <https://dataset.readthedocs.io/en/latest/quickstart.html#connecting-to-a-database>`_.
