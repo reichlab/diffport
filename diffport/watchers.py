@@ -33,6 +33,7 @@ class WatcherNumberOfRows(Watcher):
         Take snapshot for number of rows in given table grouped by asked fields
         """
 
+        # TODO Support multiple entries
         if len(config["groupby"]) > 0:
             stmt = "SELECT {0}, count(*) AS count FROM {1} GROUP BY {0} ORDER BY {0}".format("', ".join(config["groupby"]), config["table"])
             return [r for r in db.query()]
@@ -69,6 +70,7 @@ class WatcherTablesInSchema(Watcher):
         Save list of tables in given schema
         """
 
+        # TODO Support multiple entries
         res = db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = '{}'".format(config["schema"]))
         return [r["table_name"] for r in res]
 

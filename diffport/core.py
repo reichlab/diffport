@@ -3,7 +3,7 @@ Core things
 """
 
 import colorama  # type: ignore
-import dataset
+import dataset  # type: ignore
 import hashlib
 import json
 import yaml
@@ -55,9 +55,10 @@ class Diffport:
 
     def take_snapshot(self, identifier=None):
         items = [
-            WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
-            for watcher in self._config["watchers"]
-        ]
+            {
+                "watcher": watcher["name"],
+                "data": WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
+            } for watcher in self._config["watchers"]]
 
         sorted_dump = json.dumps(items, sort_keys=True)
         snap_hash = hashlib.sha1(sorted_dump.encode("utf-16be")).hexdigest()
@@ -95,3 +96,19 @@ class Diffport:
                 print("time: {}\n".format(time_str))
                 if "identifier" in it:
                     print("\t{}\n".format(it["identifier"]))
+
+    def diff(self, old_snap_hash, new_snap_hash):
+        """
+        Return diff for the given hashes
+        """
+
+        old_snap = self.store.get_snapshot(old_snap_hash)
+        new_snap = self.store.get_snapshot(new_snap_hash)
+
+        report = ""
+
+        # TODO Assuming the snaps to have samee type of items as of now
+        for idx, item in enumerate(old_snap["items"]):
+            report += WATCHER_MAP[item["watcher"]]().diff(item["data"], new_snap["items"][idx]["data"])
+
+        print(report)
