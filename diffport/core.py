@@ -58,7 +58,7 @@ class Diffport:
             {
                 "watcher": watcher["name"],
                 "data": WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
-            } for watcher in self._config["watchers"]]
+            } for watcher in self._config]
 
         sorted_dump = json.dumps(items, sort_keys=True)
         snap_hash = hashlib.sha1(sorted_dump.encode("utf-16be")).hexdigest()
