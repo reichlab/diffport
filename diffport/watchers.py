@@ -71,7 +71,7 @@ class WatcherTablesInSchema(Watcher):
         """
 
         # TODO Support multiple entries
-        res = db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = '{}'".format(config["schema"]))
+        res = db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = '{}'".format(config))
         return [r["table_name"] for r in res]
 
     @staticmethod
