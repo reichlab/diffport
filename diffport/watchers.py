@@ -36,7 +36,7 @@ class WatcherNumberOfRows(Watcher):
         # TODO Support multiple entries
         if len(config["groupby"]) > 0:
             stmt = "SELECT {0}, count(*) AS count FROM {1} GROUP BY {0} ORDER BY {0}".format("', ".join(config["groupby"]), config["table"])
-            return [r for r in db.query()]
+            return [r for r in db.query(stmt)]
         else:
             # Total count
             return db[config["table"]].count()
