@@ -104,6 +104,7 @@ class Diffport:
 
         if len(self.index) == 0:
             err("No snaphots found")
+            sys.exit(1)
         else:
             print()
             for it in self.index:
