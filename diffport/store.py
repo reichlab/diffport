@@ -50,7 +50,9 @@ class StoreDirectory(Store):
         Return a thin index of items in store
         """
 
-        return [{k:v for k, v in snap.items() if k != "items"} for snap in self.snaps]
+        return sorted([
+            {k:v for k, v in snap.items() if k != "items"} for snap in self.snaps
+        ], key=lambda x: x["time"], reverse=True)
 
     def get_snapshot(self, snap_hash):
         """
