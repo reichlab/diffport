@@ -129,13 +129,26 @@ class Diffport:
                     snap["hash"] for snap in self.index[:2]
                 ]
 
-        old_snap = self.store.get_snapshot(old_snap_hash)
-        new_snap = self.store.get_snapshot(new_snap_hash)
+        old_items = self.store.get_snapshot(old_snap_hash)["items"]
+        new_items = self.store.get_snapshot(new_snap_hash)["items"]
 
-        report = ""
+        # Take diffs only for watchers present in both old and new items
+        old_watchers = [item["watcher"] for item in old_items]
+        new_watchers = [item["watcher"] for item in new_items]
+        diffs = []
 
-        # TODO Assuming the snaps to have same type of items as of now
-        for idx, item in enumerate(old_snap["items"]):
-            report += WATCHER_MAP[item["watcher"]]().diff(item["data"], new_snap["items"][idx]["data"])
+        for idx, name in enumerate(old_watchers):
+            try:
+                old = old_items[idx]["data"]
+                new = new_items[new_watchers.index(name)]["data"]
+                diffs.append(WATCHER_MAP[name]().diff(old, new))
+            except ValueError:
+                diffs.append(None)
 
-        print(report)
+        # Get non null reports
+        reports = [
+            WATCHER_MAP[name]().report(diffs[idx])
+            for idx, name in enumerate(old_watchers) if diffs[idx] is not None
+        ]
+
+        print("\n".join(reports))
