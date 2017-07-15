@@ -39,7 +39,15 @@ def warn(text, end="\n"):
 
 
 class Diffport:
+    """
+    Main diffport class. Coordinates the cli, watchers and the storage backend
+    """
+
     def __init__(self, config_file: Path) -> None:
+        """
+        Initialize diffport using the provided config file path.
+        """
+
         if not config_file.is_file():
             raise ConfigError("Config file not found")
 
@@ -76,11 +84,20 @@ class Diffport:
             self.store.add_snapshot(snap)
             info("Snapshot {} saved".format(snap["hash"]))
 
-    def remove_snapshot(self, snap_hash):
+    def remove_snapshot(self, snap_hash: str):
+        """
+        Remove given snap hash from the store
+        """
+
         self.store.remove_snapshot(snap_hash)
         info("Snapshot {} removed".format(snap_hash))
 
     def list_snapshots(self, json_output=False):
+        """
+        List snapshots in most recent first order. Print output in json for
+        program ingestion if json_output is true.
+        """
+
         if json_output:
             print(json.dumps(self.index), end="")
             return
@@ -99,7 +116,7 @@ class Diffport:
 
     def diff(self, old_snap_hash=None, new_snap_hash=None):
         """
-        Return diff for the given hashes
+        Return diff for the given hashes (or the last two snapshots)
         """
 
         if not (old_snap_hash and new_snap_hash):
