@@ -6,8 +6,9 @@ import colorama  # type: ignore
 import dataset  # type: ignore
 import hashlib
 import json
-import yaml
+import sys
 import time
+import yaml
 from colorama import Fore, Back, Style
 from datetime import datetime
 from pathlib import Path
@@ -94,17 +95,26 @@ class Diffport:
                 if "identifier" in it:
                     print("\t{}\n".format(it["identifier"]))
 
-    def diff(self, old_snap_hash, new_snap_hash):
+    def diff(self, old_snap_hash=None, new_snap_hash=None):
         """
         Return diff for the given hashes
         """
+
+        if not (old_snap_hash and new_snap_hash):
+            if len(sel.index) < 2:
+                err("Not enough snapshots available for diffing")
+                sys.exit(1)
+            else:
+                new_snap_hash, old_snap_hash = [
+                    snap["hash"] for snap in sorted(self.index, key=lambda x: x["time"], reverse=True)[:2]
+                ]
 
         old_snap = self.store.get_snapshot(old_snap_hash)
         new_snap = self.store.get_snapshot(new_snap_hash)
 
         report = ""
 
-        # TODO Assuming the snaps to have samee type of items as of now
+        # TODO Assuming the snaps to have same type of items as of now
         for idx, item in enumerate(old_snap["items"]):
             report += WATCHER_MAP[item["watcher"]]().diff(item["data"], new_snap["items"][idx]["data"])
 
