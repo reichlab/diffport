@@ -85,9 +85,7 @@ class Diffport:
             err("No snaphots found")
         else:
             print()
-            sorted_snaps = sorted(
-                self.index, key=lambda x: x["time"], reverse=True)
-            for it in sorted_snaps:
+            for it in self.index:
                 time_str = datetime.fromtimestamp(
                     it["time"]).strftime("%Y-%m-%d %H:%M:%S")
                 info("hash: {}".format(it["hash"]))
@@ -106,7 +104,7 @@ class Diffport:
                 sys.exit(1)
             else:
                 new_snap_hash, old_snap_hash = [
-                    snap["hash"] for snap in sorted(self.index, key=lambda x: x["time"], reverse=True)[:2]
+                    snap["hash"] for snap in self.index[:2]
                 ]
 
         old_snap = self.store.get_snapshot(old_snap_hash)
