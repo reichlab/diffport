@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from .watchers import WatcherNumberOfRows, WatcherTablesInSchema
 from .store import StoreDirectory
+from .exceptions import ConfigError
+
 
 WATCHER_MAP = {
     "number-of-rows": WatcherNumberOfRows,
@@ -33,11 +35,6 @@ def info(text, end="\n"):
 
 def warn(text, end="\n"):
     print(Fore.YELLOW + Style.BRIGHT + text, end=end)
-
-
-# Exceptions
-class ConfigError(Exception):
-    pass
 
 
 class Diffport:

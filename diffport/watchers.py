@@ -6,12 +6,6 @@ import pandas as pd
 from abc import ABC, abstractmethod
 from tabulate import tabulate
 
-# Exceptions
-class WatcherNotImplemented(Exception):
-    pass
-
-class WatcherError(Exception):
-    pass
 
 class Watcher(ABC):
 
