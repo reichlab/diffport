@@ -52,7 +52,7 @@ class Diffport:
             raise ConfigError("Config file not found")
 
         with config_file.open() as fp:
-            self._config = yaml.load(fp)
+            self.config = yaml.load(fp)
 
         self.db = dataset.connect()
 
@@ -68,7 +68,7 @@ class Diffport:
         items = [{
             "watcher": watcher["name"],
             "data": WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
-        } for watcher in self._config]
+        } for watcher in self.config]
 
         sorted_dump = json.dumps(items, sort_keys=True)
         snap_hash = hashlib.sha1(sorted_dump.encode("utf-16be")).hexdigest()
@@ -135,20 +135,17 @@ class Diffport:
         # Take diffs only for watchers present in both old and new items
         old_watchers = [item["watcher"] for item in old_items]
         new_watchers = [item["watcher"] for item in new_items]
-        diffs = []
+        reports = []
 
-        for idx, name in enumerate(old_watchers):
+        for watcher in enumerate(self.config):
+            name = watcher["name"]
             try:
-                old = old_items[idx]["data"]
+                old = old_items[old_watchers.index(name)]["data"]
                 new = new_items[new_watchers.index(name)]["data"]
-                diffs.append(WATCHER_MAP[name]().diff(old, new))
+                diff = WATCHER_MAP[name]().diff(old, new)
+                if diff:
+                    WATCHER_MAP[name]().report(diff, watcher["config"])
             except ValueError:
-                diffs.append(None)
-
-        # Get non null reports
-        reports = [
-            WATCHER_MAP[name]().report(diffs[idx])
-            for idx, name in enumerate(old_watchers) if diffs[idx] is not None
-        ]
+                continue
 
         print("\n".join(reports))
