@@ -32,7 +32,7 @@ def main():
     diffp = Diffport(Path(args["--config"]))
 
     if args["save"]:
-        diffp.take_snapshot(args["--identifier"])
+        diffp.save_snapshot(args["--identifier"])
     elif args["rm"] or args["remove"]:
         reply = input("Are you sure? [y/n] : ").lower().strip()
         if reply[0] == "y":

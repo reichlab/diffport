@@ -51,12 +51,16 @@ class Diffport:
         self.store = StoreDirectory(config_file.parent.joinpath("diffport.d"))
         self.index = self.store.get_index()
 
-    def take_snapshot(self, identifier=None):
-        items = [
-            {
-                "watcher": watcher["name"],
-                "data": WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
-            } for watcher in self._config]
+    def save_snapshot(self, identifier: str = None) -> None:
+        """
+        Take a snapshot by looping over the watchers specified in the config
+        and save it via store object. Optionally apply identifier to it.
+        """
+
+        items = [{
+            "watcher": watcher["name"],
+            "data": WATCHER_MAP[watcher["name"]].take_snapshot(self.db, watcher["config"])
+        } for watcher in self._config]
 
         sorted_dump = json.dumps(items, sort_keys=True)
         snap_hash = hashlib.sha1(sorted_dump.encode("utf-16be")).hexdigest()
