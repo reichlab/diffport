@@ -5,24 +5,46 @@ Modules for watchers
 import pandas as pd
 from abc import ABC, abstractmethod
 from tabulate import tabulate
+from typing import Dict
+from .templates import *
 
 
 class Watcher(ABC):
 
     @staticmethod
     @abstractmethod
-    def take_snapshot(db, config):
+    def take_snapshot(db, config: Dict):
+        """
+        Return a snapshot dictionary using the config and db.
+        """
         ...
 
     @staticmethod
     @abstractmethod
     def diff(old, new):
+        """
+        Return a dictionary representing the diff between old and new snapshot.
+        The output goes into report function for getting a markdown string.
+        """
         ...
 
+    @staticmethod
+    @abstractmethod
+    def report(diff, config: Dict) -> str:
+        """
+        Return a report in markdown format for given diff.
+        """
+        ...
+
+
 class WatcherNumberOfRows(Watcher):
+    """
+    Watch for changes in number of rows in tables. Also provides grouped
+    counts.
+    """
 
     @staticmethod
-    def take_snapshot(db, config):
+    def take_snapshot(db, config: Dict):
         """
         Take snapshot for number of rows in given table grouped by asked fields
         """
@@ -36,30 +58,39 @@ class WatcherNumberOfRows(Watcher):
             return db[config["table"]].count()
 
     @staticmethod
-    def diff(a, b):
+    def diff(old, new):
         # Check if both have same type of snapshot
-        assert type(a) == type(b)
+        assert type(old) == type(new)
 
-        if type(a) is int:
-            return "Change: {} rows".format(b - a)
+        if type(old) is int:
+            return new - old
         else:
-            a = pd.DataFrame(a)
-            b = pd.DataFrame(b)
-            merge_keys = list(a.columns[:-1])
-            merged = pd.merge(a, b, how="outer", on=merge_keys)
+            old = pd.DataFrame(old)
+            new = pd.DataFrame(new)
+            merge_keys = list(old.columns[:-1])
+            merged = pd.merge(old, new, how="outer", on=merge_keys)
             merged["count diff"] = merged["count_x"] - merged["count_y"]
             del merged["count_x"]
             del merged["count_y"]
+            return merged
 
+    @staticmethod
+    def report(diff, config: Dict) -> str:
+
+        if type(diff) is int:
+            return f"Change: {diff} rows"
+        else:
             out = "Changes: \n\n"
             out += tabulate(merged, headers="keys")
-            out += "\n\n"
             return out
 
 class WatcherTablesInSchema(Watcher):
+    """
+    Watch for tables added/removed in schema
+    """
 
     @staticmethod
-    def take_snapshot(db, config):
+    def take_snapshot(db, config: Dict):
         """
         Save list of tables in given schema
         """
@@ -69,25 +100,18 @@ class WatcherTablesInSchema(Watcher):
         return [r["table_name"] for r in res]
 
     @staticmethod
-    def diff(a, b):
-        """
-        Assume b to be the newer one
-        """
+    def diff(old, new):
 
-        removed = list(set(a) - set(b))
-        added = list(set(b) - set(a))
+        return {
+            "removed": list(set(old) - set(new)),
+            "added": list(set(new) - set(old))
+        }
 
-        out = ""
-        if len(removed) != 0:
-            out += "Removed tables :\n\n"
-            for tb in removed:
-                out += "- {}\n".format(tb)
-            out += "\n\n"
+    @staticmethod
+    def report(diff, config: Dict) -> str:
 
-        if len(added) != 0:
-            out += "Added tables :\n\n"
-            for tb in added:
-                out += "- {}\n".format(tb)
-            out += "\n\n"
-
-        return out
+        tpl_tables_in_schema.render(
+            schema_name=config,
+            added_tables=diff["added"],
+            removed_tables=diff["removed"]
+        )
