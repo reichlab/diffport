@@ -110,7 +110,7 @@ class WatcherTablesInSchema(Watcher):
     @staticmethod
     def report(diff, config: Dict) -> str:
 
-        tpl_tables_in_schema.render(
+        return tpl_tables_in_schema.render(
             schema_name=config,
             added_tables=diff["added"],
             removed_tables=diff["removed"]
