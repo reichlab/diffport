@@ -37,7 +37,27 @@ def test_add_snap(tmpdir):
 
     assert len(store.get_index()) == 1
     assert store.get_index()[0]["hash"] == snap["hash"]
-    print(store.snaps)
     assert store.get_snapshot(snap["hash"]) == snap
     with store_path.joinpath(str(snap["time"])).open() as fp:
         assert snap == yaml.load(fp)
+
+def test_remove_snap(tmpdir):
+    """
+    Test that snap removal works
+    """
+
+    store_path = Path(tmpdir.join("store"))
+    store = StoreDirectory(store_path)
+
+    snap = {
+        "time": time.time(),
+        "identifier": "Test snapshot",
+        "hash": "some-hash-here",
+        "items": []
+    }
+
+    store.add_snapshot(snap)
+    store.remove_snapshot(snap["hash"])
+
+    assert len(store.get_index()) == 0
+    assert not store_path.joinpath(str(snap["time"])).exists()

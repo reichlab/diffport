@@ -60,7 +60,7 @@ class StoreDirectory(Store):
         """
 
         try:
-            return [snap for snap in self.snaps if snap["hash"] == snap_hash][0]
+            return next((snap for snap in self.snaps if snap["hash"] == snap_hash))
         except IndexError:
             return None
 
@@ -71,6 +71,6 @@ class StoreDirectory(Store):
             yaml.dump(snap, fp)
 
     def remove_snapshot(self, snap_hash):
-        snap_idx = next((idx for idx, it in self.snaps if it["hash"] == snap_hash))
+        snap_idx = next((idx for idx, it in enumerate(self.snaps) if it["hash"] == snap_hash))
         self.path.joinpath(str(self.snaps[snap_idx]["time"])).unlink()
-        self.snaps.delete(snap_idx)
+        self.snaps.pop(snap_idx)
