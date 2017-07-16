@@ -60,7 +60,7 @@ class StoreDirectory(Store):
         """
 
         try:
-            (snap for snap in self.snaps if snap["hash"] == snap_hash)[0]
+            return [snap for snap in self.snaps if snap["hash"] == snap_hash][0]
         except IndexError:
             return None
 
