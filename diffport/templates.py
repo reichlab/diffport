@@ -9,7 +9,7 @@ def tpl(template_text):
     Return a standard jinja2 template
     """
 
-    return Template(template_text, lstrip_block=True)
+    return Template(template_text, lstrip_blocks=True)
 
 tpl_tables_in_schema = tpl("""## Schema changes
 
