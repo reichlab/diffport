@@ -81,7 +81,7 @@ class WatcherNumberOfRows(Watcher):
             return f"Change: {diff} rows"
         else:
             out = "Changes: \n\n"
-            out += tabulate(merged, headers="keys")
+            out += tabulate(diff, headers="keys")
             return out
 
 class WatcherTablesInSchema(Watcher):
