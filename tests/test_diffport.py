@@ -34,7 +34,7 @@ def test_list(tmpdir):
     """
 
     diffp = Diffport(CONFIG, "sqlite:///:memory:", Path(tmpdir).joinpath("store"))
-    assert len(diffp.list_snapshots(json_output=True)) == 0
+    assert len(diffp.index) == 0
     db_seed(diffp.db)
     diffp.save_snapshot()
-    assert len(diffp.list_snapshots(json_output=True)) == 1
+    assert len(diffp.index) == 1
