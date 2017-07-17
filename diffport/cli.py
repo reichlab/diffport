@@ -21,11 +21,31 @@ Command Line::
     -v, --version        Show version
 """
 
+import colorama
 import os
 import sys
 from .core import Diffport
+from .exceptions import ConfigError
+from colorama import Fore, Back, Style
+from datetime import datetime
 from docopt import docopt  # type: ignore
 from pathlib import Path
+
+
+# Colored prints
+colorama.init(autoreset=True)
+
+
+def err(text, end="\n"):
+    print(Fore.RED + Style.BRIGHT + text, end=end)
+
+
+def info(text, end="\n"):
+    print(Fore.BLUE + Style.BRIGHT + text, end=end)
+
+
+def warn(text, end="\n"):
+    print(Fore.YELLOW + Style.BRIGHT + text, end=end)
 
 
 def main():
@@ -47,17 +67,42 @@ def main():
         diffp = Diffport(yaml.load(fp), database_url, store_path)
 
     if args["save"]:
-        diffp.save_snapshot(args["--identifier"])
+        saved_hash = diffp.save_snapshot(args["--identifier"])
+        if saved_hash:
+            info(f"Snapshot {saved_hash} saved")
+        else:
+            warn("Snapshot data not changed, skipping")
     elif args["rm"] or args["remove"]:
         reply = input("Are you sure? [y/n] : ").lower().strip()
         if reply[0] == "y":
             diffp.remove_snapshot(args["<snap-hash>"])
+            info(f"Snapshot {args['snap-hash']} removed")
     elif args["ls"] or args["list"]:
-        diffp.list_snapshots(args["--json"])
+        if args["--json"]:
+            print(json.dumps(diffp.index), end="")
+        else:
+            if len(diffp.index) == 0:
+                err("No snapshots found")
+                sys.exit(1)
+            else:
+                print()
+                for it in diffp.index:
+                    time_str = datetime.fromtimestamp(it["time"]).strftime("%Y-%m-%d %H:%M:%S")
+                    info(f"hash: {it['hash']}")
+                    print(f"time: {time_str}")
+                    if "identifier" in it:
+                        print(f"\t{it['identifier']}\n")
     elif args["diff"]:
         if args["<snap-old>"] and args["<snap-new>"]:
             # Both snapshot ids given
-            diffp.diff(args["<snap-old>"], args["<snap-new>"])
+            print(diffp.diff(args["<snap-old>"], args["<snap-new>"]))
         else:
-            # Ask diffp to use latest two snapshots
-            diffp.diff()
+            # Get last two snapshots
+            if len(diffp.index) < 2:
+                err("Not enough snapshots available for diffing")
+                sys.exit(1)
+            else:
+                new_snap_hash, old_snap_hash = [
+                    snap["hash"] for snap in diffp.index[:2]
+                ]
+                print(diffp.diff(old_snap_hash, new_snap_hash))

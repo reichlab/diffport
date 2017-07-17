@@ -2,41 +2,22 @@
 Core things
 """
 
-import colorama  # type: ignore
 import dataset  # type: ignore
 import hashlib
 import json
 import sys
 import time
 import yaml
-from colorama import Fore, Back, Style
-from datetime import datetime
 from pathlib import Path
 from typing import Dict
 from .watchers import WatcherNumberOfRows, WatcherTablesInSchema
 from .store import StoreDirectory
-from .exceptions import ConfigError
 
 
 WATCHER_MAP = {
     "number-of-rows": WatcherNumberOfRows,
     "tables-in-schema": WatcherTablesInSchema
 }
-
-# Colored prints
-colorama.init(autoreset=True)
-
-
-def err(text, end="\n"):
-    print(Fore.RED + Style.BRIGHT + text, end=end)
-
-
-def info(text, end="\n"):
-    print(Fore.BLUE + Style.BRIGHT + text, end=end)
-
-
-def warn(text, end="\n"):
-    print(Fore.YELLOW + Style.BRIGHT + text, end=end)
 
 
 class Diffport:
@@ -54,7 +35,7 @@ class Diffport:
         self.store = StoreDirectory(store_path)
         self.index = self.store.get_index()
 
-    def save_snapshot(self, identifier: str = None) -> None:
+    def save_snapshot(self, identifier: str = None):
         """
         Take a snapshot by looping over the watchers specified in the config
         and save it via store object. Optionally apply identifier to it.
@@ -74,11 +55,11 @@ class Diffport:
             snap["identifier"] = identifier
 
         if snap["hash"] in [item["hash"] for item in self.index]:
-            warn("Snapshot {} already exists, skipping".format(snap["hash"]))
+            return None
         else:
             self.store.add_snapshot(snap)
             self.index = self.store.get_index()
-            info("Snapshot {} saved".format(snap["hash"]))
+            return snap["hash"]
 
     def remove_snapshot(self, snap_hash: str):
         """
@@ -87,44 +68,11 @@ class Diffport:
 
         self.store.remove_snapshot(snap_hash)
         self.index = self.store.get_index()
-        info("Snapshot {} removed".format(snap_hash))
 
-    def list_snapshots(self, json_output=False):
+    def diff(self, old_snap_hash, new_snap_hash):
         """
-        List snapshots in most recent first order. Print output in json for
-        program ingestion if json_output is true.
+        Return diff for the given hashes
         """
-
-        if json_output:
-            print(json.dumps(self.index), end="")
-            return self.index
-
-        if len(self.index) == 0:
-            err("No snaphots found")
-            sys.exit(1)
-        else:
-            print()
-            for it in self.index:
-                time_str = datetime.fromtimestamp(
-                    it["time"]).strftime("%Y-%m-%d %H:%M:%S")
-                info("hash: {}".format(it["hash"]))
-                print("time: {}\n".format(time_str))
-                if "identifier" in it:
-                    print("\t{}\n".format(it["identifier"]))
-
-    def diff(self, old_snap_hash=None, new_snap_hash=None):
-        """
-        Return diff for the given hashes (or the last two snapshots)
-        """
-
-        if not (old_snap_hash and new_snap_hash):
-            if len(sel.index) < 2:
-                err("Not enough snapshots available for diffing")
-                sys.exit(1)
-            else:
-                new_snap_hash, old_snap_hash = [
-                    snap["hash"] for snap in self.index[:2]
-                ]
 
         old_items = self.store.get_snapshot(old_snap_hash)["items"]
         new_items = self.store.get_snapshot(new_snap_hash)["items"]
@@ -145,4 +93,4 @@ class Diffport:
             except ValueError:
                 continue
 
-        print("\n".join(reports))
+        return "\n".join(reports)
