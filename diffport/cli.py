@@ -29,7 +29,14 @@ from pathlib import Path
 
 def main():
     args = docopt(__doc__, argv=sys.argv[1:], version="v0.1.0")
-    diffp = Diffport(Path(args["--config"]))
+
+    config_file = Path(args["--config"])
+
+    if not config_file.is_file():
+        raise ConfigError("Config file not found")
+
+    with config_file.open() as fp:
+        diffp = Diffport(yaml.load(fp))
 
     if args["save"]:
         diffp.save_snapshot(args["--identifier"])

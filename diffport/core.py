@@ -12,6 +12,7 @@ import yaml
 from colorama import Fore, Back, Style
 from datetime import datetime
 from pathlib import Path
+from typing import Dict
 from .watchers import WatcherNumberOfRows, WatcherTablesInSchema
 from .store import StoreDirectory
 from .exceptions import ConfigError
@@ -43,16 +44,12 @@ class Diffport:
     Main diffport class. Coordinates the cli, watchers and the storage backend
     """
 
-    def __init__(self, config_file: Path) -> None:
+    def __init__(self, config: Dict) -> None:
         """
-        Initialize diffport using the provided config file path.
+        Initialize diffport using the provided config
         """
 
-        if not config_file.is_file():
-            raise ConfigError("Config file not found")
-
-        with config_file.open() as fp:
-            self.config = yaml.load(fp)
+        self.config = config
 
         self.db = dataset.connect()
 
