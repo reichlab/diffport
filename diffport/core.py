@@ -95,7 +95,7 @@ class Diffport:
 
         if json_output:
             print(json.dumps(self.index), end="")
-            return
+            return self.index
 
         if len(self.index) == 0:
             err("No snaphots found")
