@@ -21,6 +21,7 @@ Command Line::
     -v, --version        Show version
 """
 
+import os
 import sys
 from .core import Diffport
 from docopt import docopt  # type: ignore
@@ -31,12 +32,19 @@ def main():
     args = docopt(__doc__, argv=sys.argv[1:], version="v0.1.0")
 
     config_file = Path(args["--config"])
+    store_path = config_file.parent.joinpath("diffport.d")
 
     if not config_file.is_file():
         raise ConfigError("Config file not found")
 
+    try:
+        database_url = os.environ["DATABASE_URL"]
+    except KeyError:
+        print("DATABASE_URL environment variable not set.")
+        sys.exit(1)
+
     with config_file.open() as fp:
-        diffp = Diffport(yaml.load(fp))
+        diffp = Diffport(yaml.load(fp), database_url, store_path)
 
     if args["save"]:
         diffp.save_snapshot(args["--identifier"])

@@ -44,16 +44,14 @@ class Diffport:
     Main diffport class. Coordinates the cli, watchers and the storage backend
     """
 
-    def __init__(self, config: Dict) -> None:
+    def __init__(self, config: Dict, database_url: str, store_path: Path) -> None:
         """
         Initialize diffport using the provided config
         """
 
         self.config = config
-
-        self.db = dataset.connect()
-
-        self.store = StoreDirectory(config_file.parent.joinpath("diffport.d"))
+        self.db = dataset.connect(database_url)
+        self.store = StoreDirectory(store_path)
         self.index = self.store.get_index()
 
     def save_snapshot(self, identifier: str = None) -> None:
