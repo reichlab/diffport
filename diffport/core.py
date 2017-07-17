@@ -77,6 +77,7 @@ class Diffport:
             warn("Snapshot {} already exists, skipping".format(snap["hash"]))
         else:
             self.store.add_snapshot(snap)
+            self.index = self.store.get_index()
             info("Snapshot {} saved".format(snap["hash"]))
 
     def remove_snapshot(self, snap_hash: str):
@@ -85,6 +86,7 @@ class Diffport:
         """
 
         self.store.remove_snapshot(snap_hash)
+        self.index = self.store.get_index()
         info("Snapshot {} removed".format(snap_hash))
 
     def list_snapshots(self, json_output=False):
