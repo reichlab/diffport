@@ -24,6 +24,7 @@ Command Line::
 import colorama
 import os
 import sys
+import yaml
 from .core import Diffport
 from .exceptions import ConfigError
 from colorama import Fore, Back, Style
