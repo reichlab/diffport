@@ -93,4 +93,4 @@ class Diffport:
             except ValueError:
                 continue
 
-        return "\n".join(reports)
+        return "\n\n".join(reports)
