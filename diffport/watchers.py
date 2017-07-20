@@ -69,20 +69,23 @@ class WatcherNumberOfRows(Watcher):
             new = pd.DataFrame(new)
             merge_keys = list(old.columns[:-1])
             merged = pd.merge(old, new, how="outer", on=merge_keys)
-            merged["count diff"] = merged["count_x"] - merged["count_y"]
+            merged["count diff"] = merged["count_y"] - merged["count_x"]
             del merged["count_x"]
             del merged["count_y"]
-            return merged
+            return merged[merged["count diff"] != 0].reset_index(drop=True)
 
     @staticmethod
     def report(diff, config: Dict) -> str:
 
+        out = f"## Changes in number of rows\n\n### Table `{config['table']}`\n\n"
+
         if type(diff) is int:
-            return f"Change: {diff} rows"
+            out += f"Change: {diff} rows"
         else:
-            out = "Changes: \n\n"
+            out += "Changes: \n\n"
             out += tabulate(diff, headers="keys")
             return out
+        return out
 
 class WatcherTablesInSchema(Watcher):
     """
