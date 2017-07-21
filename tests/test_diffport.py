@@ -75,5 +75,5 @@ def test_diff(tmpdir):
     old_hash = diffp.save_snapshot()
     db_seed(diffp.db)
     new_hash = diffp.save_snapshot()
-    expected_report = WatcherNumberOfRows.report(1, CONFIG[0]["config"])
-    assert diffp.diff(old_hash, new_hash) == expected_report
+    expected_report_tail = WatcherNumberOfRows.report(1, CONFIG[0]["config"])
+    assert diffp.diff(old_hash, new_hash).endswith(expected_report_tail)
