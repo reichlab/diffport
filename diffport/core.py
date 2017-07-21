@@ -101,6 +101,9 @@ class Diffport:
         old_time = datetime.fromtimestamp(old_snap["time"]).strftime("%Y-%m-%d %H:%M:%S")
         new_time = datetime.fromtimestamp(new_snap["time"]).strftime("%Y-%m-%d %H:%M:%S")
 
-        header = f"# Database changes\n\n> From snapshot {old_snap_hash} *taken at {old_time}* to snapshot {new_snap_hash} *taken at {new_time}*\n\n"
+        header = "# Database changes\n\n"
+        header += "> Between snapshots\n\n"
+        header += f"> - at {old_time} (*{old_snap_hash}*)\n"
+        header += f"> - at {new_time} (*{new_snap_hash}*)\n\n"
 
         return header + "\n\n".join(reports)
