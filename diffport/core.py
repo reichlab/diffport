@@ -74,8 +74,11 @@ class Diffport:
         Return diff for the given hashes
         """
 
-        old_items = self.store.get_snapshot(old_snap_hash)["items"]
-        new_items = self.store.get_snapshot(new_snap_hash)["items"]
+        old_snap = self.store.get_snapshot(old_snap_hash)
+        new_snap = self.store.get_snapshot(new_snap_hash)
+
+        old_items = old_snap["items"]
+        new_items = new_snap["items"]
 
         # Take diffs only for watchers present in both old and new items
         old_watchers = [item["watcher"] for item in old_items]
@@ -93,4 +96,10 @@ class Diffport:
             except ValueError:
                 continue
 
-        return "\n\n".join(reports)
+        # Add time information about snapshots as the header
+        old_time = datetime.fromtimestamp(old_snap["time"]).strftime("%Y-%m-%d %H:%M:%S")
+        new_time = datetime.fromtimestamp(new_snap["time"]).strftime("%Y-%m-%d %H:%M:%S")
+
+        header = f"# Database changes\n\n> From snapshot {old_snap_hash} *taken at {old_time}* to snapshot {new_snap_hash} *taken at {new_time}*\n\n"
+
+        return header + "\n\n".join(reports)
