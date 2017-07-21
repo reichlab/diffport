@@ -8,6 +8,7 @@ import json
 import sys
 import time
 import yaml
+from datetime import datetime
 from pathlib import Path
 from typing import Dict
 from .watchers import WatcherNumberOfRows, WatcherTablesInSchema
