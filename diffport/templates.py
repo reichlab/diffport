@@ -11,7 +11,7 @@ def tpl(template_text):
 
     return Template(template_text, lstrip_blocks=True)
 
-tpl_tables_in_schema = tpl("""## Schema changes
+tpl_tables_in_schema = tpl("""## Schema table changes
 
 ### `{{ schema_name }}`
 
@@ -33,3 +33,27 @@ Removed tables:
 {% else -%}
   *None*
 {%- endif %}""")
+
+tpl_columns_in_schema = tpl("""## Schema column changes
+
+### `{{ schema_name }}`
+
+Added columns:
+
+{% if added_columns|length > 0 -%}
+  {% for column in added_columns -%}
+    - {{ column }}
+  {% endfor -%}
+{% else -%}
+  *None*
+{% endif %}
+Removed columns:
+
+{% if removed_columns|length > 0 %}
+  {% for column in removed_columns -%}
+    - {{ column }}
+  {% endfor %}
+{% else -%}
+  *None*
+{%- endif %}""")
+

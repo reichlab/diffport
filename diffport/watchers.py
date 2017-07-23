@@ -87,6 +87,7 @@ class WatcherNumberOfRows(Watcher):
             return out
         return out
 
+
 class WatcherTablesInSchema(Watcher):
     """
     Watch for tables added/removed in schema
@@ -117,4 +118,37 @@ class WatcherTablesInSchema(Watcher):
             schema_name=config,
             added_tables=diff["added"],
             removed_tables=diff["removed"]
+        )
+
+
+class WatcherColumnsInSchema(Watcher):
+    """
+    Watch for columns added/removed considering all tables of a schema at a time
+    """
+
+    @staticmethod
+    def take_snapshot(db, config: Dict):
+        """
+        Save all distinct table in given schema
+        """
+
+        # TODO Support multiple entries
+        res = db.query(f"SELECT DISTINCT column_name FROM information_schema.columns WHERE table_schema = '{config}'")
+        return [r["column_name"] for r in res]
+
+    @staticmethod
+    def diff(old, new):
+
+        return {
+            "removed": list(set(old) - set(new)),
+            "added": list(set(new) - set(old))
+        }
+
+    @staticmethod
+    def report(diff, config: Dict) -> str:
+
+        return tpl_columns_in_schema.render(
+            schema_name=config,
+            added_columns=diff["added"],
+            removed_columns=diff["removed"]
         )
