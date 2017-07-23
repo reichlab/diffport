@@ -47,6 +47,12 @@ class WatcherNumberOfRows(Watcher):
     def take_snapshot(db, config: Dict):
         """
         Take snapshot for number of rows in given table grouped by asked fields
+
+        config:
+          groupby:
+            - <list-item>
+            - <list-item>
+          table: <string>
         """
 
         # TODO Support multiple entries
@@ -97,6 +103,8 @@ class WatcherTablesInSchema(Watcher):
     def take_snapshot(db, config: Dict):
         """
         Save list of tables in given schema
+
+        config: <string>
         """
 
         # TODO Support multiple entries
@@ -130,6 +138,8 @@ class WatcherColumnsInSchema(Watcher):
     def take_snapshot(db, config: Dict):
         """
         Save all distinct table in given schema
+
+        config: <string>
         """
 
         # TODO Support multiple entries
