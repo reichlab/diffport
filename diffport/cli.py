@@ -2,14 +2,10 @@
 Command Line::
 
   Usage:
-    diffport save [--identifier=ID]
-             [--config=CFG] [--source=CON] [--dialect=DIA]
-    diffport (rm | remove) <snap-hash>
-             [--config=CFG] [--source=CON] [--dialect=DIA]
-    diffport (ls | list) [--json]
-             [--config=CFG] [--source=CON] [--dialect=DIA]
-    diffport diff [<snap-old> <snap-new>]
-             [--config=CFG] [--source=CON] [--dialect=DIA]
+    diffport save [--identifier=ID] [--config=CFG] [--source=CON] [--dialect=DIA]
+    diffport (rm | remove) <snap-hash> [--config=CFG]
+    diffport (ls | list) [--json] [--config=CFG]
+    diffport diff [<snap-old> <snap-new>] [--config=CFG]
 
   Arguments:
     save                 Save a snapshot at current time
@@ -65,12 +61,13 @@ def main():
     if not config_file.is_file():
         raise ConfigError("Config file not found")
 
-    database_url = get_connection_string(args["--source"], args["--dialect"])
-
     with config_file.open() as fp:
-        diffp = Diffport(yaml.load(fp), database_url, store_path)
+        diffp = Diffport(yaml.load(fp), store_path)
 
     if args["save"]:
+        database_url = get_connection_string(args["--source"], args["--dialect"])
+        diffp.connect(database_url)
+
         saved_hash = diffp.save_snapshot(args["--identifier"])
         if saved_hash:
             info(f"Snapshot {saved_hash} saved")

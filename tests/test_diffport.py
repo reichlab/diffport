@@ -34,7 +34,8 @@ def test_list(tmpdir):
     Test that listing is alright
     """
 
-    diffp = Diffport(CONFIG, "sqlite:///:memory:", Path(tmpdir).joinpath("store"))
+    diffp = Diffport(CONFIG, Path(tmpdir).joinpath("store"))
+    diffp.connect("sqlite:///:memory:")
     assert len(diffp.index) == 0
     db_seed(diffp.db)
     diffp.save_snapshot()
@@ -46,7 +47,8 @@ def test_remove(tmpdir):
     Test that remove works
     """
 
-    diffp = Diffport(CONFIG, "sqlite:///:memory:", Path(tmpdir).joinpath("store"))
+    diffp = Diffport(CONFIG, Path(tmpdir).joinpath("store"))
+    diffp.connect("sqlite:///:memory:")
     db_seed(diffp.db)
     snap_hash = diffp.save_snapshot()
     diffp.remove_snapshot(snap_hash)
@@ -58,7 +60,8 @@ def test_duplicates(tmpdir):
     Test that duplicate snaps don't get added
     """
 
-    diffp = Diffport(CONFIG, "sqlite:///:memory:", Path(tmpdir).joinpath("store"))
+    diffp = Diffport(CONFIG, Path(tmpdir).joinpath("store"))
+    diffp.connect("sqlite:///:memory:")
     db_seed(diffp.db)
     diffp.save_snapshot()
     diffp.save_snapshot()
@@ -70,7 +73,8 @@ def test_diff(tmpdir):
     Test diff reporting
     """
 
-    diffp = Diffport(CONFIG, "sqlite:///:memory:", Path(tmpdir).joinpath("store"))
+    diffp = Diffport(CONFIG, Path(tmpdir).joinpath("store"))
+    diffp.connect("sqlite:///:memory:")
     db_seed(diffp.db)
     old_hash = diffp.save_snapshot()
     db_seed(diffp.db)
