@@ -85,13 +85,10 @@ class WatcherNumberOfRows(Watcher):
 
         out = f"## Changes in number of rows\n\n### Table `{config['table']}`\n\n"
 
-        if type(diff) is int:
-            out += f"Change: {diff} rows"
-        else:
-            out += "Changes: \n\n"
-            out += tabulate(diff, headers="keys")
-            return out
-        return out
+        return tpl_number_of_rows.render(
+            table_name=config,
+            change=f"{diff} rows" if type(diff) else tabulate(diff, headers="keys")
+        )
 
 
 class WatcherTablesInSchema(Watcher):

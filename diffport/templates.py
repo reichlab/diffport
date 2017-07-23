@@ -11,6 +11,11 @@ def tpl(template_text):
 
     return Template(template_text, lstrip_blocks=True)
 
+tpl_number_of_rows = tpl("""## Number of rows changes
+
+### `{{ table_name }}`
+{{ change }}""")
+
 tpl_tables_in_schema = tpl("""## Schema table changes
 
 ### `{{ schema_name }}`
