@@ -162,3 +162,66 @@ class WatcherColumnsInSchema(Watcher):
             added_columns=diff["added"],
             removed_columns=diff["removed"]
         )
+
+
+class WatcherTableChange(Watcher):
+    """
+    Watch for table changes
+    """
+
+    @staticmethod
+    def take_snapshot(db, config: Dict):
+        """
+        Save all table hashes in given schema
+
+        config:
+          schemas:
+            - <schema-one>
+            - <schema-two>
+          tables:
+            - <table-one>
+            - <table-two>
+        """
+
+        # Create a list of tables to look for
+        tables = []
+        try:
+            tables += config["tables"]
+        except KeyError:
+            pass
+
+        if "schemas" in config:
+            for schema in config["schemas"]:
+                res = db.query(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{schema}'")
+                tables += [f"{schema}.{r['table_name']}" for r in res]
+
+        # Create hash of tables
+        def _table_hash(table):
+            res = db.query(f"""SELECT md5(array_agg(md5((t.*)::varchar))::varchar) as hash
+              FROM (
+                SELECT *
+                  FROM {table}
+                ORDER BY 1
+              ) AS t""")
+            return res.next()["hash"]
+
+        return { table: _table_hash(table) for table in tables }
+
+    @staticmethod
+    def diff(old, new):
+        changed = []
+        for table, checksum in old:
+            if table in new:
+                if new[table] != checksum:
+                    changed.append(table)
+
+        return changed
+
+    @staticmethod
+    def report(diff, config: Dict) -> str:
+
+        return tpl_table_change.render(
+            watched_schemas=config["schemas"],
+            watched_tables=config["tables"],
+            changed_tables=diff
+        )
