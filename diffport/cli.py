@@ -2,10 +2,14 @@
 Command Line::
 
   Usage:
-    diffport save [--identifier=ID] [--config=CFG]
-    diffport (rm | remove) <snap-hash> [--config=CFG]
-    diffport (ls | list) [--json] [--config=CFG]
-    diffport diff [<snap-old> <snap-new>] [--config=CFG]
+    diffport save [--identifier=ID]
+             [--config=CFG] [--source=CON] [--dialect=DIA]
+    diffport (rm | remove) <snap-hash>
+             [--config=CFG] [--source=CON] [--dialect=DIA]
+    diffport (ls | list) [--json]
+             [--config=CFG] [--source=CON] [--dialect=DIA]
+    diffport diff [<snap-old> <snap-new>]
+             [--config=CFG] [--source=CON] [--dialect=DIA]
 
   Arguments:
     save                 Save a snapshot at current time
@@ -17,6 +21,8 @@ Command Line::
   Options:
     --json               Output for machines
     --config=CFG         Configuration file [default: ./diffport.yaml]
+    --source=CON         Database source [default: env]
+    --dialect=DIA        Database type [default: postgresql]
     -h, --help           Open help
     -v, --version        Show version
 """
@@ -26,6 +32,7 @@ import os
 import sys
 import yaml
 from .core import Diffport
+from .connection import get_connection_string
 from .exceptions import ConfigError
 from colorama import Fore, Back, Style
 from datetime import datetime
@@ -58,11 +65,7 @@ def main():
     if not config_file.is_file():
         raise ConfigError("Config file not found")
 
-    try:
-        database_url = os.environ["DATABASE_URL"]
-    except KeyError:
-        print("DATABASE_URL environment variable not set.")
-        sys.exit(1)
+    database_url = get_connection_string(args["--source"], args["--dialect"])
 
     with config_file.open() as fp:
         diffp = Diffport(yaml.load(fp), database_url, store_path)
