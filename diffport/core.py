@@ -11,13 +11,14 @@ import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
-from .watchers import WatcherNumberOfRows, WatcherTablesInSchema
+from .watchers import WatcherNumberOfRows, WatcherTablesInSchema, WatcherColumnsInSchema
 from .store import StoreDirectory
 
 
 WATCHER_MAP = {
     "number-of-rows": WatcherNumberOfRows,
-    "tables-in-schema": WatcherTablesInSchema
+    "tables-in-schema": WatcherTablesInSchema,
+    "columns-in-schema": WatcherColumnsInSchema
 }
 
 
