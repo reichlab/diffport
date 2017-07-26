@@ -14,6 +14,7 @@ def tpl(template_text):
 tpl_number_of_rows = tpl("""## Number of rows changes
 
 ### `{{ table_name }}`
+
 {{ change }}""")
 
 tpl_tables_in_schema = tpl("""## Schema table changes
