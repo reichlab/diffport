@@ -2,6 +2,7 @@
 Storate for snapshots
 """
 
+import gzip
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -43,7 +44,7 @@ class StoreDirectory(Store):
         files = [it for it in self.path.iterdir() if it.is_file()]
 
         for sf in files:
-            with sf.open() as fp:
+            with gzip.open(sf) as fp:
                 self.snaps.append(json.load(fp))
 
     def get_index(self):
@@ -68,7 +69,7 @@ class StoreDirectory(Store):
     def add_snapshot(self, snap):
         self.snaps.append(snap)
 
-        with self.path.joinpath(str(snap["time"])).open("w") as fp:
+        with gzip.open(self.path.joinpath(str(snap["time"])), "wb") as fp:
             json.dump(snap, fp)
 
     def remove_snapshot(self, snap_hash):
