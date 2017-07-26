@@ -91,7 +91,7 @@ class WatcherNumberOfRows(Watcher):
             """
 
             # [removed, added]
-            return [len(set(old) - set(new)), len(set(new) - set(old))]
+            return [len(set(old_hashes) - set(new_hashes)), len(set(new_hashes) - set(old_hashes))]
 
         if type(old[0]) == type(new[0]) == str:
             # This data is without grouping
