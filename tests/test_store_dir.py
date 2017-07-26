@@ -6,7 +6,7 @@ from diffport.store import StoreDirectory
 from pathlib import Path
 import os
 import time
-import msgpack
+import json
 
 
 def test_create_directory(tmpdir):
@@ -38,8 +38,8 @@ def test_add_snap(tmpdir):
     assert len(store.get_index()) == 1
     assert store.get_index()[0]["hash"] == snap["hash"]
     assert store.get_snapshot(snap["hash"]) == snap
-    with store_path.joinpath(str(snap["time"])).open("rb") as fp:
-        assert snap == msgpack.load(fp)
+    with store_path.joinpath(str(snap["time"])).open() as fp:
+        assert snap == json.load(fp)
 
 def test_remove_snap(tmpdir):
     """

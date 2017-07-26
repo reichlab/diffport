@@ -19,7 +19,6 @@ setup(
         "dataset",
         "jinja2",
         "pyyaml",
-        "msgpack-python",
         "tabulate"
     ],
     keywords="",
