@@ -41,7 +41,7 @@ class StoreDirectory(Store):
 
     def init_snaps(self):
         self.snaps = []
-        files = [it for it in self.path.iterdir() if it.is_file()]
+        files = [it for it in self.path.iterdir() if it.is_file() and it.suffix == ".gz"]
 
         for sf in files:
             with gzip.open(sf) as fp:
@@ -69,10 +69,10 @@ class StoreDirectory(Store):
     def add_snapshot(self, snap):
         self.snaps.append(snap)
 
-        with gzip.open(self.path.joinpath(str(snap["time"])), "wb") as fp:
+        with gzip.open(self.path.joinpath(str(snap["time"]) + ".gz"), "wb") as fp:
             json.dump(snap, fp)
 
     def remove_snapshot(self, snap_hash):
         snap_idx = next((idx for idx, it in enumerate(self.snaps) if it["hash"] == snap_hash))
-        self.path.joinpath(str(self.snaps[snap_idx]["time"])).unlink()
+        self.path.joinpath(str(self.snaps[snap_idx]["time"]) + ".gz").unlink()
         self.snaps.pop(snap_idx)
