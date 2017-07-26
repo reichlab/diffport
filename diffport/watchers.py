@@ -60,36 +60,73 @@ class WatcherNumberOfRows(Watcher):
             group_fields = ", ".join(config["groupby"])
             select_fields = f"{group_fields}, md5({config['table']}::text) as hash"
             stmt = f"SELECT {select_fields} FROM {config['table']} ORDER BY {group_fields}"
-            return [dict(r) for r in db.query(stmt)]
+
+            # ORDER BY lets us switch rows on sequentially
+            grouped_data = []
+            hashes = []
+            prev_group_values = None
+            for res in db.query(stmt):
+                group_values = [res[field] for field in config["groupby"]]
+
+                if prev_group_values is None:
+                    prev_group_values = group_values
+
+                if group_values != prev_group_values:
+                    grouped_data.append([*group_values, list(hashes)])
+                    prev_group_values = group_values
+                    hashes = []
+                else:
+                    hashes.append(res["hash"])
+            return grouped_data
         else:
             # Total count
-            return db[config["table"]].count()
+            stmt = f"SELECT md5({config['table']}::text) as hash FROM {config['table']}"
+            return [r["hash"] for r in db.query(stmt)]
 
     @staticmethod
     def diff(old, new):
-        # Check if both have same type of snapshot
-        assert type(old) == type(new)
 
-        if type(old) is int:
-            return new - old
+        def _get_diff(old_hashes, new_hashes):
+            """
+            Get diff counts between list of hashes
+            """
+
+            # [removed, added]
+            return [len(set(old) - set(new)), len(set(new) - set(old))]
+
+        if type(old[0]) == type(new[0]) == str:
+            # This data is without grouping
+            diff = _get_diff(old, new)
+            return {
+                "removed": diff[0],
+                "added": diff[1]
+            }
         else:
-            old = pd.DataFrame(old)
-            new = pd.DataFrame(new)
-            merge_keys = list(old.columns[:-1])
-            merged = pd.merge(old, new, how="outer", on=merge_keys)
-            merged["count diff"] = merged["count_y"] - merged["count_x"]
-            del merged["count_x"]
-            del merged["count_y"]
-            return merged[merged["count diff"] != 0].reset_index(drop=True)
+            # Work with group values of the old snapshot
+            new_group_identifiers = [group_row[:-1] for group_row in new]
+            changes = []
+            for group_row in old:
+                old_group_identifier = group_row[:-1]
+                if old_group_identifier in new_group_identifiers:
+                    new_hashes = new[new_group_identifiers.index(old_group_identifier)][-1]
+                    old_hashes = group_row[-1]
+                    changes.append([*old_group_identifier, *_get_diff(old_hashes, new_hashes)])
+
+            return changes
 
     @staticmethod
     def report(diff, config: Dict) -> str:
 
         out = f"## Changes in number of rows\n\n### Table `{config['table']}`\n\n"
 
+        if type(diff) is dict:
+            change = f"{diff['removed']} rows removed, {diff['added']} added"
+        else:
+            change = tabulate(diff, headers=[*config["groupby"], "rows removed", "rows added"])
+
         return tpl_number_of_rows.render(
             table_name=config,
-            change=f"{diff} rows" if type(diff) else tabulate(diff, headers="keys")
+            change=change,
         )
 
 
