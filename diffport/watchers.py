@@ -56,9 +56,11 @@ class WatcherNumberOfRows(Watcher):
         """
 
         # TODO Support multiple entries
-        if len(config["groupby"]) > 0:
-            stmt = "SELECT {0}, count(*) AS count FROM {1} GROUP BY {0} ORDER BY {0}".format(", ".join(config["groupby"]), config["table"])
-            return [r for r in db.query(stmt)]
+        if "groupby" in config:
+            group_fields = ", ".join(config["groupby"])
+            select_fields = f"{group_fields}, md5({config['table']}::text) as hash"
+            stmt = f"SELECT {select_fields} FROM {config['table']} ORDER BY {group_fields}"
+            return [dict(r) for r in db.query(stmt)]
         else:
             # Total count
             return db[config["table"]].count()
