@@ -109,7 +109,9 @@ class WatcherNumberOfRows(Watcher):
                 if old_group_identifier in new_group_identifiers:
                     new_hashes = new[new_group_identifiers.index(old_group_identifier)][-1]
                     old_hashes = group_row[-1]
-                    changes.append([*old_group_identifier, *_get_diff(old_hashes, new_hashes)])
+                    diff = _get_diff(old_hashes, new_hashes)
+                    if diff != [0, 0]:
+                        changes.append([*old_group_identifier, *diff])
 
             return changes
 
