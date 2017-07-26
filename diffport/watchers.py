@@ -2,7 +2,6 @@
 Modules for watchers
 """
 
-import pandas as pd
 from abc import ABC, abstractmethod
 from tabulate import tabulate
 from typing import Dict

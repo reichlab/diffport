@@ -2,7 +2,7 @@
 Storate for snapshots
 """
 
-import yaml
+import msgpack
 from abc import ABC, abstractmethod
 from pathlib import Path
 
@@ -35,6 +35,7 @@ class StoreDirectory(Store):
         self.path.mkdir(parents=True, exist_ok=True)
 
         # Load everything upfront
+        # TODO: Don't load everything upfront
         self.init_snaps()
 
     def init_snaps(self):
@@ -42,8 +43,8 @@ class StoreDirectory(Store):
         files = [it for it in self.path.iterdir() if it.is_file()]
 
         for sf in files:
-            with sf.open() as fp:
-                self.snaps.append(yaml.load(fp))
+            with sf.open("rb") as fp:
+                self.snaps.append(msgpack.load(fp))
 
     def get_index(self):
         """
@@ -67,8 +68,8 @@ class StoreDirectory(Store):
     def add_snapshot(self, snap):
         self.snaps.append(snap)
 
-        with self.path.joinpath(str(snap["time"])).open("w") as fp:
-            yaml.dump(snap, fp)
+        with self.path.joinpath(str(snap["time"])).open("wb") as fp:
+            msgpack.dump(snap, fp)
 
     def remove_snapshot(self, snap_hash):
         snap_idx = next((idx for idx, it in enumerate(self.snaps) if it["hash"] == snap_hash))
