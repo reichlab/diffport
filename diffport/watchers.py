@@ -115,16 +115,13 @@ class WatcherNumberOfRows(Watcher):
 
     @staticmethod
     def report(diff, config: Dict) -> str:
-
-        out = f"## Changes in number of rows\n\n### Table `{config['table']}`\n\n"
-
         if type(diff) is dict:
             change = f"{diff['removed']} rows removed, {diff['added']} added"
         else:
             change = tabulate(diff, headers=[*config["groupby"], "rows removed", "rows added"])
 
         return tpl_number_of_rows.render(
-            table_name=config,
+            table_name=config["table"],
             change=change,
         )
 
