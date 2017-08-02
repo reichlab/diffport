@@ -65,7 +65,8 @@ def main():
         diffp = Diffport(yaml.load(fp), store_path)
 
     if args["save"]:
-        database_url = get_connection_string(args["--source"], args["--dialect"])
+        source_path = str(Path(args["--source"]).expanduser().absolute())
+        database_url = get_connection_string(source_path, args["--dialect"])
         diffp.connect(database_url)
 
         saved_hash = diffp.save_snapshot(args["--identifier"])
