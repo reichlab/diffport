@@ -19,7 +19,8 @@ setup(
         "dataset",
         "jinja2",
         "pyyaml",
-        "tabulate"
+        "tabulate",
+        "psycopg2"
     ],
     keywords="",
     packages=find_packages(),
