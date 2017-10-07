@@ -22,6 +22,13 @@ setup(
         "tabulate",
         "psycopg2"
     ],
+    setup_requires=[
+        "pytest-runner"
+    ],
+    tests_require=[
+        "pytest",
+        "pytest-postgresql"
+    ],
     keywords="",
     packages=find_packages(),
     entry_points={"console_scripts": ["diffport=diffport.cli:main"]},
