@@ -4,7 +4,7 @@ Modules for watchers
 
 from abc import ABC, abstractmethod
 from tabulate import tabulate
-from typing import Dict
+from typing import Dict, List
 from .templates import *
 
 
@@ -62,7 +62,7 @@ class WatcherNumberOfRows(Watcher):
 
             # ORDER BY lets us switch rows on sequentially
             grouped_data = []
-            hashes = []
+            hashes = [] # type: List[str]
             prev_group_values = None
             for res in db.query(stmt):
                 group_values = [res[field] for field in config["groupby"]]
@@ -218,7 +218,7 @@ class WatcherTableChange(Watcher):
         """
 
         # Create a list of tables to look for
-        tables = []
+        tables = [] # type: List[str]
         try:
             tables += config["tables"]
         except KeyError:
