@@ -67,18 +67,6 @@ tpl_table_change = tpl("""## Tables changed
 
 ### Watched tables/schemas
 
-{% if watched_schemas|length > 0 -%}
-**Schemas**
-
-{% for schema in watched_schemas %}- {{ schema }}
-{% endfor -%}
-{% endif %}
-{% if watched_tables|length > 0 -%}
-**Tables**
-
-{% for table in watched_tables %}- {{ table }}
-{% endfor -%}
-{% endif %}
 ### Changed tables
 
 {% if changed_tables|length > 0 -%}

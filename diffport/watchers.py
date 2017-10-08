@@ -239,14 +239,15 @@ class WatcherTableChange(Watcher):
               ) AS t""")
             return res.next()["hash"]
 
-        return { table: _table_hash(table) for table in tables }
+        return [[table, _table_hash(table)] for table in tables]
 
     @staticmethod
     def diff(old, new):
         changed = []
         for table, checksum in old:
-            if table in new:
-                if new[table] != checksum:
+            new_idx = [row[0] for row in new].index(table)
+            if new_idx > -1:
+                if new[new_idx][1] != checksum:
                     changed.append(table)
 
         return changed
@@ -255,7 +256,5 @@ class WatcherTableChange(Watcher):
     def report(diff, config: Dict) -> str:
 
         return tpl_table_change.render(
-            watched_schemas=config["schemas"],
-            watched_tables=config["tables"],
             changed_tables=diff
         )
