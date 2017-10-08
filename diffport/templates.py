@@ -19,12 +19,13 @@ tpl_number_of_rows = tpl("""## Number of rows changes
 
 tpl_tables_in_schema = tpl("""## Schema table changes
 
-### `{{ schema_name }}`
+{% for schema in data -%}
+### `{{ schema[0] }}`
 
 Added tables:
 
-{% if added_tables|length > 0 -%}
-  {% for table in added_tables -%}
+{% if schema[1]['added']|length > 0 -%}
+  {% for table in schema[1]['added'] -%}
     - {{ table }}
   {% endfor -%}
 {% else -%}
@@ -32,13 +33,14 @@ Added tables:
 {% endif %}
 Removed tables:
 
-{% if removed_tables|length > 0 %}
-  {% for table in removed_tables -%}
+{% if schema[1]['removed']|length > 0 -%}
+  {% for table in schema[1]['removed'] -%}
     - {{ table }}
   {% endfor %}
 {% else -%}
   *None*
-{%- endif %}""")
+{%- endif %}
+{% endfor -%}""")
 
 tpl_columns_in_schema = tpl("""## Schema column changes
 

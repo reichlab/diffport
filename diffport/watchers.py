@@ -138,28 +138,36 @@ class WatcherTablesInSchema(Watcher):
         """
         Save list of tables in given schema
 
-        config: <string>
+        config: [<schema>, ...]
         """
 
-        # TODO Support multiple entries
-        res = db.query("SELECT table_name FROM information_schema.tables WHERE table_schema = '{}'".format(config))
-        return [r["table_name"] for r in res]
+        def get_schema_tables(schema):
+            res = db.query(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{schema}'")
+            return [r["table_name"] for r in res]
+
+        return [[schema, get_schema_tables(schema)] for schema in config]
 
     @staticmethod
     def diff(old, new):
-
-        return {
-            "removed": list(set(old) - set(new)),
-            "added": list(set(new) - set(old))
-        }
+        # Only using schemas which are available in old
+        output = []
+        for schema, tables in old:
+            new_idx = [row[0] for row in new].index(schema)
+            if new_idx > -1:
+                removed_tbls = list(set(tables) - set(new[new_idx][1]))
+                added_tbls = list(set(new[new_idx][1]) - set(tables))
+                if not (len(removed_tbls) == len(added_tbls) == 0):
+                    output.append([schema, {
+                        "removed": removed_tbls,
+                        "added": added_tbls,
+                    }])
+        return output
 
     @staticmethod
     def report(diff, config: Dict) -> str:
 
         return tpl_tables_in_schema.render(
-            schema_name=config,
-            added_tables=diff["added"],
-            removed_tables=diff["removed"]
+            data=diff
         )
 
 

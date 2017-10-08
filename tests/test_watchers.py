@@ -53,7 +53,56 @@ class TestTablesInSchema:
     Tests for tables-in-schema watcher
     """
 
-    pass
+    config = [{
+        "name": "tables-in-schema",
+        "config": ["scm_one", "scm_two", "scm_three"]
+    }]
+
+    schema_tables = [
+        "scm_one.tab_one",
+        "scm_one.tab_two",
+        "scm_two.tab_one"
+    ]
+
+    to_add = ["scm_one.tab_three", "scm_two.tab_two"]
+    to_remove = ["scm_one.tab_one"]
+
+    def init_db(self, db):
+        for schema in self.config[0]["config"]:
+            db.query(f"CREATE SCHEMA {schema};")
+        for table in self.schema_tables:
+            db.query(f"CREATE TABLE {table} (num INTEGER);")
+
+    def fill_db(self, db):
+        for table in self.to_add:
+            db.query(f"CREATE TABLE {table} (num INTEGER);")
+        for table in self.to_remove:
+            db.query(f"DROP TABLE {table};")
+
+    def clean_db(self, db):
+        for schema in self.config[0]["config"]:
+            db.query(f"DROP SCHEMA {schema} CASCADE;")
+
+    def test_diff(self, tmpdir, pgurl):
+        diffp = get_diffp(tmpdir, self.config, pgurl)
+        self.init_db(diffp.db)
+        old_hash = diffp.save_snapshot()
+        self.fill_db(diffp.db)
+        new_hash = diffp.save_snapshot()
+        self.clean_db(diffp.db)
+
+        diff = [
+            ["scm_one", {
+                "removed": ["tab_one"],
+                "added": ["tab_three"]
+            }],
+            ["scm_two", {
+                "removed": [],
+                "added": ["tab_two"]
+            }]
+        ]
+        report = WatcherTablesInSchema.report(diff, self.config[0]["config"])
+        assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
 class TestColumnsInSchema:
