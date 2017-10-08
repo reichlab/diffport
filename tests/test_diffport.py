@@ -9,6 +9,7 @@ from random import random
 import pytest
 import dataset
 
+
 @pytest.fixture
 def pgurl(request):
     """
@@ -27,84 +28,81 @@ def pgurl(request):
     request.addfinalizer(clear_db)
     return url
 
-def get_diffp(path, config, url):
+
+@pytest.fixture
+def config():
+    """
+    Return default diffport config
+    """
+
+    return [{
+        "name": "tables-in-schema",
+        "config": "scm"
+    }]
+
+
+@pytest.fixture
+def diffp(request, tmpdir, config, pgurl):
     """
     Return a diffport instance
     """
 
-    diffp = Diffport(config, Path(path).joinpath("store"))
-    diffp.connect(url)
+    diffp = Diffport(config, Path(tmpdir).joinpath("store"))
+    diffp.connect(pgurl)
+
+    diffp.db.query("CREATE SCHEMA scm;")
+    diffp.db.query("CREATE TABLE scm.tab (num INTEGER);")
+
+    def clear_db():
+        diffp.db.query("DROP SCHEMA scm CASCADE;")
+
+    request.addfinalizer(clear_db)
+
     return diffp
 
-def test_list(tmpdir, pgurl):
+
+def test_list(diffp):
     """
     Test that listing is alright
     """
 
-    config = [{
-        "name": "tables-in-schema",
-        "config": "scm"
-    }]
-
-    diffp = get_diffp(tmpdir, config, pgurl)
-    diffp.db.query("CREATE SCHEMA scm;")
-    diffp.db.query("CREATE TABLE scm.tab (num integer);")
-
     assert len(diffp.index) == 0
     diffp.save_snapshot()
     assert len(diffp.index) == 1
-    diffp.db.query("DROP SCHEMA scm CASCADE;")
 
 
-def test_remove(tmpdir, pgurl):
+def test_remove(diffp):
     """
     Test that remove works
     """
 
-    config = [{
-        "name": "tables-in-schema",
-        "config": "scm"
-    }]
-
-    diffp = get_diffp(tmpdir, config, pgurl)
-    diffp.db.query("CREATE SCHEMA scm;")
-    diffp.db.query("CREATE TABLE scm.tab (num integer);")
-
     snap_hash = diffp.save_snapshot()
     diffp.remove_snapshot(snap_hash)
     assert len(diffp.index) == 0
-    diffp.db.query("DROP SCHEMA scm CASCADE;")
 
 
-def test_duplicates(tmpdir, pgurl):
+def test_duplicates(diffp):
     """
     Test that duplicate snaps don't get added
     """
-
-    config = [{
-        "name": "tables-in-schema",
-        "config": "scm"
-    }]
-
-    diffp = get_diffp(tmpdir, config, pgurl)
-    diffp.db.query("CREATE SCHEMA scm;")
-    diffp.db.query("CREATE TABLE scm.tab (num integer);")
 
     snap_hash = diffp.save_snapshot()
     diffp.save_snapshot()
     diffp.save_snapshot()
     assert len(diffp.index) == 1
-    diffp.db.query("DROP SCHEMA scm CASCADE;")
 
 
-# def test_diff(diffp):
-#     """
-#     Test diff reporting
-#     """
+def test_diff(diffp):
+    """
+    Test diff reporting
+    """
 
-#     db_seed(diffp.db)
-#     old_hash = diffp.save_snapshot()
-#     db_seed(diffp.db)
-#     new_hash = diffp.save_snapshot()
-#     expected_report_tail = WatcherNumberOfRows.report(1, CONFIG[0]["config"])
-#     assert diffp.diff(old_hash, new_hash).endswith(expected_report_tail)
+    old_hash = diffp.save_snapshot()
+    diffp.db.query("CREATE TABLE scm.second (num INTEGER);")
+    new_hash = diffp.save_snapshot()
+    diff = {
+        "removed": [],
+        "added": ["second"]
+    }
+
+    assert diffp.diff(old_hash, new_hash).endswith(WatcherTablesInSchema.report(diff, "scm"))
