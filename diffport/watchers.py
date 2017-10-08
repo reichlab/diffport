@@ -173,28 +173,36 @@ class WatcherColumnsInSchema(Watcher):
         """
         Save all distinct table in given schema
 
-        config: <string>
+        config: [<schema>, ...]
         """
 
-        # TODO Support multiple entries
-        res = db.query(f"SELECT DISTINCT column_name FROM information_schema.columns WHERE table_schema = '{config}'")
-        return [r["column_name"] for r in res]
+        def get_schema_columns(schema):
+            res = db.query(f"SELECT DISTINCT column_name FROM information_schema.columns WHERE table_schema = '{schema}'")
+            return [r["column_name"] for r in res]
+
+        return [[schema, get_schema_columns(schema)] for schema in config]
 
     @staticmethod
     def diff(old, new):
-
-        return {
-            "removed": list(set(old) - set(new)),
-            "added": list(set(new) - set(old))
-        }
+        # Only using schemas which are available in old
+        output = []
+        for schema, columns in old:
+            new_idx = [row[0] for row in new].index(schema)
+            if new_idx > -1:
+                removed_cols = list(set(columns) - set(new[new_idx][1]))
+                added_cols = list(set(new[new_idx][1]) - set(columns))
+                if not (len(removed_cols) == len(added_cols) == 0):
+                    output.append([schema, {
+                        "removed": removed_cols,
+                        "added": added_cols,
+                    }])
+        return output
 
     @staticmethod
     def report(diff, config: Dict) -> str:
 
         return tpl_columns_in_schema.render(
-            schema_name=config,
-            added_columns=diff["added"],
-            removed_columns=diff["removed"]
+            data=diff
         )
 
 

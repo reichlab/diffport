@@ -42,12 +42,13 @@ Removed tables:
 
 tpl_columns_in_schema = tpl("""## Schema column changes
 
-### `{{ schema_name }}`
+{% for schema in data -%}
+### `{{ schema[0] }}`
 
 Added columns:
 
-{% if added_columns|length > 0 -%}
-  {% for column in added_columns -%}
+{% if schema[1]['added']|length > 0 -%}
+  {% for column in schema[1]['added'] -%}
     - {{ column }}
   {% endfor -%}
 {% else -%}
@@ -55,13 +56,14 @@ Added columns:
 {% endif %}
 Removed columns:
 
-{% if removed_columns|length > 0 %}
-  {% for column in removed_columns -%}
+{% if schema[1]['removed']|length > 0 -%}
+  {% for column in schema[1]['removed'] -%}
     - {{ column }}
   {% endfor %}
 {% else -%}
   *None*
-{%- endif %}""")
+{%- endif %}
+{% endfor -%}""")
 
 tpl_table_change = tpl("""## Tables changed
 
