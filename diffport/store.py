@@ -69,7 +69,7 @@ class StoreDirectory(Store):
     def add_snapshot(self, snap):
         self.snaps.append(snap)
 
-        with gzip.open(self.path.joinpath(str(snap["time"]) + ".gz"), "w") as fp:
+        with gzip.open(self.path.joinpath(f"{snap['time']}.gz"), "w") as fp:
             fp.write(json.dumps(snap).encode("utf-8"))
 
     def remove_snapshot(self, snap_hash):
