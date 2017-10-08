@@ -26,8 +26,7 @@ setup(
         "pytest-runner"
     ],
     tests_require=[
-        "pytest",
-        "pytest-postgresql"
+        "pytest"
     ],
     keywords="",
     packages=find_packages(),

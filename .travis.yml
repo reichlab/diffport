@@ -9,6 +9,9 @@ install:
   - "python setup.py develop"
   - "pip install mypy sphinx"
 
+before_script:
+  - psql -c "create database diffport_test_db;" -U postgres
+
 script:
   - "python setup.py test"
   - "mypy ./diffport"
