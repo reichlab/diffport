@@ -7,7 +7,7 @@ project_url = "https://github.com/reichlab/diffport"
 
 setup(
     name="diffport",
-    version="0.1.0",
+    version="0.2.0",
     description="Database summary diff reporting tool",
     long_description=readme,
     author="Abhinav Tushar",
