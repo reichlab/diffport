@@ -45,7 +45,54 @@ class TestNumberOfRows:
     Tests for number-of-rows
     """
 
-    pass
+    config = [{
+        "name": "number-of-rows",
+        "config": [
+            {
+                "table": "table_basic"
+            }
+            # ,
+            # {
+            #     "groupby": ["g_one", "g_two"],
+            #     "table": "table_grouped"
+            # }
+        ]
+    }]
+
+    def init_db(self, db):
+        # Setup basic table
+        db.query(f"CREATE TABLE table_basic (one INTEGER, two INTEGER);")
+
+    def fill_db(self, db):
+        for i in range(100):
+            db.query(f"INSERT INTO table_basic VALUES ({randint(0, 1000)}, {randint(0, 1000)});")
+
+        db.query(f"INSERT INTO table_basic VALUES (55555, 55555);")
+
+    def remove_rows(self, db):
+        db.query(f"DELETE FROM table_basic WHERE one = 55555;")
+
+    def clean_db(self, db):
+        db.query(f"DROP TABLE table_basic;")
+
+    def test_diff(self, tmpdir, pgurl):
+        diffp = get_diffp(tmpdir, self.config, pgurl)
+        self.init_db(diffp.db)
+        self.fill_db(diffp.db)
+        old_hash = diffp.save_snapshot()
+        self.fill_db(diffp.db)
+        self.remove_rows(diffp.db)
+        new_hash = diffp.save_snapshot()
+        self.clean_db(diffp.db)
+
+        diff = [
+            ["table_basic", {
+                "removed": 1,
+                "added": 100
+            }, "basic"]
+        ]
+        report = WatcherNumberOfRows.report(diff)
+        assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
 class TestTablesInSchema:
@@ -101,7 +148,7 @@ class TestTablesInSchema:
                 "added": ["tab_two"]
             }]
         ]
-        report = WatcherTablesInSchema.report(diff, self.config[0]["config"])
+        report = WatcherTablesInSchema.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
@@ -159,7 +206,7 @@ class TestColumnsInSchema:
                 "added": []
             }]
         ]
-        report = WatcherColumnsInSchema.report(diff, self.config[0]["config"])
+        report = WatcherColumnsInSchema.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
@@ -217,5 +264,5 @@ class TestTableChange:
         self.clean_db(diffp.db)
 
         diff = self.to_change
-        report = WatcherTableChange.report(diff, self.config[0]["config"])
+        report = WatcherTableChange.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)

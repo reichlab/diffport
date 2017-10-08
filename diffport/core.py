@@ -101,9 +101,9 @@ class Diffport:
             try:
                 old = old_items[old_watchers.index(name)]["data"]
                 new = new_items[new_watchers.index(name)]["data"]
-                diff = WATCHER_MAP[name]().diff(old, new)
+                diff = WATCHER_MAP[name].diff(old, new)
                 if diff is not None:
-                    reports.append(WATCHER_MAP[name]().report(diff, watcher["config"]))
+                    reports.append(WATCHER_MAP[name].report(diff))
             except ValueError:
                 continue
 

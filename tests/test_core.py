@@ -104,5 +104,5 @@ def test_diff(diffp):
         "removed": [],
         "added": ["second"]
     }]]
-    report = WatcherTablesInSchema.report(diff, ["scm"])
+    report = WatcherTablesInSchema.report(diff)
     assert diffp.diff(old_hash, new_hash).endswith(report)
