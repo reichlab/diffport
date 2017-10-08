@@ -56,15 +56,24 @@ def test_list(tmpdir, pgurl):
     diffp.db.query("DROP SCHEMA scm CASCADE;")
 
 
-# def test_remove(diffp):
-#     """
-#     Test that remove works
-#     """
+def test_remove(tmpdir, pgurl):
+    """
+    Test that remove works
+    """
 
-#     db_seed(diffp.db)
-#     snap_hash = diffp.save_snapshot()
-#     diffp.remove_snapshot(snap_hash)
-#     assert len(diffp.index) == 0
+    config = [{
+        "name": "tables-in-schema",
+        "config": "scm"
+    }]
+
+    diffp = get_diffp(tmpdir, config, pgurl)
+    diffp.db.query("CREATE SCHEMA scm;")
+    diffp.db.query("CREATE TABLE scm.tab (num integer);")
+
+    snap_hash = diffp.save_snapshot()
+    diffp.remove_snapshot(snap_hash)
+    assert len(diffp.index) == 0
+    diffp.db.query("DROP SCHEMA scm CASCADE;")
 
 
 # def test_duplicates(diffp):
