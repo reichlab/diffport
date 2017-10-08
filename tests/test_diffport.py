@@ -3,7 +3,7 @@ Test core class
 """
 
 from diffport.core import Diffport
-from diffport.watchers import WatcherNumberOfRows
+from diffport.watchers import *
 from pathlib import Path
 from random import random
 import pytest
@@ -11,8 +11,19 @@ import dataset
 
 
 # Test config
-# TODO: Couple this config with clear_db in fixture
-TEST_TABLE = "test-table"
+SCHEMAS = [
+    "scm_one",
+    "scm_two"
+]
+TABLES = [
+    "pub_table",
+    "scm_one.test_table_one",
+    "scm_two.test_table_one",
+    "scm_two.test_table_two",
+    "scm_two.test_table_three",
+    "scm_two.test_table_four",
+    "scm_two.test_table_five",
+]
 CONFIG = [{
     "name": "number-of-rows",
     "config": {
@@ -27,13 +38,21 @@ def pgurl(request):
     Return url for connecting to postgres
     """
 
+    # Fill in stuff
     url = "postgresql://postgres@localhost:5432/diffport_test_db"
+    db = dataset.connect(url)
+
+    for schema in SCHEMAS:
+        db.query(f"CREATE SCHEMA {schema};")
+
+    for table in TABLES:
+        db.query(f"CREATE TABLE {table};")
 
     def clear_db():
-        # Remove all tables from database
-        db = dataset.connect(url)
-        db.query("DROP SCHEMA public CASCADE;")
-        db.query("CREATE SCHEMA public;")
+        for table in TABLES:
+            db.query(f"DROP TABLE {table};")
+        for schema in SCHEMAS:
+            db.query(f"DROP SCHEMA {schema} CASCADE;")
 
     request.addfinalizer(clear_db)
     return url
