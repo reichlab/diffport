@@ -37,7 +37,7 @@ def config():
 
     return [{
         "name": "tables-in-schema",
-        "config": "scm"
+        "config": ["scm"]
     }]
 
 
@@ -100,9 +100,9 @@ def test_diff(diffp):
     old_hash = diffp.save_snapshot()
     diffp.db.query("CREATE TABLE scm.second (num INTEGER);")
     new_hash = diffp.save_snapshot()
-    diff = {
+    diff = [["scm", {
         "removed": [],
         "added": ["second"]
-    }
-
-    assert diffp.diff(old_hash, new_hash).endswith(WatcherTablesInSchema.report(diff, "scm"))
+    }]]
+    report = WatcherTablesInSchema.report(diff, ["scm"])
+    assert diffp.diff(old_hash, new_hash).endswith(report)
