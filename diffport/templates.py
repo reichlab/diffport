@@ -46,34 +46,34 @@ Removed tables:
 
 tpl_columns_in_schema = tpl("""## Schema column changes
 
-{% for schema in data -%}
-### `{{ schema[0] }}`
+{% if data|length > 0 -%}
+  {% for schema in data -%}
+  ### `{{ schema[0] }}`
 
-Added columns:
+  Added columns:
 
-{% if schema[1]['added']|length > 0 -%}
-  {% for column in schema[1]['added'] -%}
-    - {{ column }}
+  {% if schema[1]['added']|length > 0 -%}
+    {% for column in schema[1]['added'] -%}
+      - {{ column }}
+    {% endfor -%}
+  {% else -%}
+    *None*
+  {% endif %}
+  Removed columns:
+
+  {% if schema[1]['removed']|length > 0 -%}
+    {% for column in schema[1]['removed'] -%}
+      - {{ column }}
+    {% endfor %}
+  {% else -%}
+    *None*
+  {%- endif %}
   {% endfor -%}
 {% else -%}
   *None*
-{% endif %}
-Removed columns:
+{%- endif %}""")
 
-{% if schema[1]['removed']|length > 0 -%}
-  {% for column in schema[1]['removed'] -%}
-    - {{ column }}
-  {% endfor %}
-{% else -%}
-  *None*
-{%- endif %}
-{% endfor -%}""")
-
-tpl_table_change = tpl("""## Tables changed
-
-### Watched tables/schemas
-
-### Changed tables
+tpl_table_change = tpl("""## Tables changes
 
 {% if changed_tables|length > 0 -%}
   {% for table in changed_tables -%}
