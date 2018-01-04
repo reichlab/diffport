@@ -11,7 +11,7 @@ setup(
     description="Database summary diff reporting tool",
     long_description=readme,
     author="Abhinav Tushar",
-    author_email="abhinav.tushar.vs@gmail.com",
+    author_email="lepisma@fastmail.com",
     url=project_url,
     install_requires=[
         "colorama",
