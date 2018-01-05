@@ -124,7 +124,7 @@ class TestNumberOfRowsHash:
             ["table_basic", {"removed": 1, "added": 2}, "basic"]
         ]
         report = NumberOfRowsHash.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
     def test_diff_grouped(self, tmpdir, pgurl):
         diffp = get_diffp(tmpdir, self.config_grouped, pgurl)
@@ -146,7 +146,7 @@ class TestNumberOfRowsHash:
              "grouped"]
         ]
         report = NumberOfRowsHash.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
 
 class TestNumberOfRows:
@@ -233,7 +233,7 @@ class TestNumberOfRows:
             ["table_basic", 1, "basic"]
         ]
         report = NumberOfRows.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
     def test_diff_grouped(self, tmpdir, pgurl):
         diffp = get_diffp(tmpdir, self.config_grouped, pgurl)
@@ -254,7 +254,7 @@ class TestNumberOfRows:
              "grouped"]
         ]
         report = NumberOfRows.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
 
 class TestTablesInSchema:
@@ -311,7 +311,7 @@ class TestTablesInSchema:
             }]
         ]
         report = SchemaTables.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
 
 class TestColumnsInSchema:
@@ -369,7 +369,7 @@ class TestColumnsInSchema:
             }]
         ]
         report = SchemaColumns.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)
 
 
 class TestTableChange:
@@ -427,4 +427,4 @@ class TestTableChange:
 
         diff = self.to_change
         report = TableChange.report(diff)
-        assert diffp.diff(old_hash, new_hash).endswith(report)
+        assert diffp.report(old_hash, new_hash).endswith(report)

@@ -82,9 +82,9 @@ class Diffport:
         self.store.remove_snapshot(snap_hash)
         self.index = self.store.get_index()
 
-    def diff(self, old_snap_hash, new_snap_hash):
+    def report(self, old_snap_hash, new_snap_hash):
         """
-        Return diff for the given hashes
+        Report diff for the given hashes
         """
 
         old_snap = self.store.get_snapshot(old_snap_hash)

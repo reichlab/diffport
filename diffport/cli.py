@@ -97,7 +97,7 @@ def main():
     elif args["diff"]:
         if args["<snap-old>"] and args["<snap-new>"]:
             # Both snapshot ids given
-            print(diffp.diff(args["<snap-old>"], args["<snap-new>"]))
+            print(diffp.report(args["<snap-old>"], args["<snap-new>"]))
         else:
             # Get last two snapshots
             if len(diffp.index) < 2:
@@ -107,4 +107,4 @@ def main():
                 new_snap_hash, old_snap_hash = [
                     snap["hash"] for snap in diffp.index[:2]
                 ]
-                print(diffp.diff(old_snap_hash, new_snap_hash))
+                print(diffp.report(old_snap_hash, new_snap_hash))

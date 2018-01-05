@@ -105,4 +105,4 @@ def test_diff(diffp):
         "added": ["second"]
     }]]
     report = SchemaTables.report(diff)
-    assert diffp.diff(old_hash, new_hash).endswith(report)
+    assert diffp.report(old_hash, new_hash).endswith(report)
