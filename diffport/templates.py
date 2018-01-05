@@ -11,6 +11,14 @@ def tpl(template_text):
 
     return Template(template_text, lstrip_blocks=True)
 
+tpl_number_of_rows_hash = tpl("""## Changes in number of rows (using hash)
+
+{% for table in data -%}
+### `{{ table[0] }}`
+
+{{ table[1] }}
+{% endfor -%}""")
+
 tpl_number_of_rows = tpl("""## Changes in number of rows
 
 {% for table in data -%}
@@ -19,7 +27,7 @@ tpl_number_of_rows = tpl("""## Changes in number of rows
 {{ table[1] }}
 {% endfor -%}""")
 
-tpl_tables_in_schema = tpl("""## Schema table changes
+tpl_schema_tables = tpl("""## Schema table changes
 
 {% for schema in data -%}
 ### `{{ schema[0] }}`
@@ -44,7 +52,7 @@ Removed tables:
 {%- endif %}
 {% endfor -%}""")
 
-tpl_columns_in_schema = tpl("""## Schema column changes
+tpl_schema_columns = tpl("""## Schema column changes
 
 {% if data|length > 0 -%}
   {% for schema in data -%}

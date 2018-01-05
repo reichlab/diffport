@@ -71,10 +71,10 @@ class Watcher(ABC):
         ...
 
 
-class WatcherNumberOfRows(Watcher):
+class NumberOfRowsHash(Watcher):
     """
-    Watch for changes in number of rows in tables. Also provides grouped
-    counts.
+    Watch for changes in number of rows in tables. Return the number of rows removed
+    and added based on saved hash of each row.
     """
 
     @staticmethod
@@ -88,14 +88,13 @@ class WatcherNumberOfRows(Watcher):
            ...]
         """
 
-        def get_table_hashes(table_config):
+        def _get_table_hashes(table_config):
             if "groupby" in table_config:
                 group_fields = ", ".join(table_config["groupby"])
                 select_fields = f"{group_fields}, md5({table_config['table']}::text) as hash"
                 stmt = f"SELECT {select_fields} FROM {table_config['table']} ORDER BY {group_fields}"
 
                 grouped_data = []
-                prev_group_values = None
                 for res in db.query(stmt):
                     group_values = [res[field] for field in table_config["groupby"]]
 
@@ -109,7 +108,7 @@ class WatcherNumberOfRows(Watcher):
                 stmt = f"SELECT md5({table_config['table']}::text) as hash FROM {table_config['table']}"
                 return [r["hash"] for r in db.query(stmt)]
 
-        return [(tc["table"], get_table_hashes(tc)) for tc in config]
+        return [(tc["table"], _get_table_hashes(tc)) for tc in config]
 
     @staticmethod
     def diff(old: SnapList, new: SnapList):
@@ -171,12 +170,101 @@ class WatcherNumberOfRows(Watcher):
                              headers=[*["_" for i in range(len(table_diff[1][0]))], "rows removed", "rows added"])
                 ])
 
-        return tpl_number_of_rows.render(
-            data=data,
-        )
+        return tpl_number_of_rows_hash.render(data=data)
 
 
-class WatcherTablesInSchema(Watcher):
+class NumberOfRows(Watcher):
+    """
+    Watch for changes in number of rows in tables and return only the difference.
+    """
+
+    @staticmethod
+    def take_snapshot(db, config: Any) -> SnapList:
+        """
+        Take snapshot for number of rows in given table grouped by asked fields
+
+        config:
+          [{groupby: [cols, ...]
+            table: <string>},
+           ...]
+        """
+
+        def _get_table_counts(table_config):
+            """
+            For a table in config, if there is no groupby, return a tuple
+            like (table_name: str, count: int)
+            If there is a groupby field in config, return a the grouped counts in a list
+            where each item is a pair of group by field values and count.
+            """
+
+            if "groupby" in table_config:
+                group_fields = ", ".join(table_config["groupby"])
+                select_fields = f"{group_fields}, count(*) as count"
+                stmt = f"SELECT {select_fields} FROM {table_config['table']} GROUP BY {group_fields} ORDER BY {group_fields}"
+
+                counts = []
+                for res in db.query(stmt):
+                    counts.append([[res[field] for field in table_config["groupby"]], res["count"]])
+                return counts
+            else:
+                stmt = f"SELECT count(*) as count FROM {table_config['table']}"
+                return db.query(stmt).next()["count"]
+
+        return [(tc["table"], _get_table_counts(tc)) for tc in config]
+
+    @staticmethod
+    def diff(old: SnapList, new: SnapList):
+
+        old, new = items_common(old, new)
+
+        output = [] # type: Any
+        for row_old, row_new in zip(old, new):
+            if type(row_old[1]) == int:
+                # This data is without grouping, each row_old/new[1] is a direct count
+                diff = row_new[1] - row_old[1]
+                output.append([row_old[0], diff, "basic"])
+            else:
+                # This is grouped data, each row_old/new[1] is like [[grouped-cols, ...], count]
+                old_set, new_set = items_common(row_old[1], row_new[1])
+                col_set_diff = [] # type: SnapList
+                for old_col_set, new_col_set in zip(old_set, new_set):
+                    diff = new_col_set[1] - old_col_set[1]
+                    if diff != 0:
+                        col_set_diff.append((old_col_set[0], diff))
+
+                only_removed = items_sub(row_old[1], row_new[1])
+                for col_set in only_removed:
+                    diff = -col_set[1]
+                    if diff != 0:
+                        col_set_diff.append((col_set[0], diff))
+
+                only_added = items_sub(row_new[1], row_old[1])
+                for col_set in only_added:
+                    diff = col_set[1]
+                    if diff != 0:
+                        col_set_diff.append((col_set[0], diff))
+
+                output.append([row_old[0], col_set_diff, "grouped"])
+
+        return output
+
+    @staticmethod
+    def report(diff) -> str:
+        data = []
+        for table_diff in diff:
+            if table_diff[-1] == "basic":
+                data.append([table_diff[0], f"Changes: {table_diff[1]}"])
+            elif table_diff[-1] == "grouped":
+                data.append([
+                    table_diff[0],
+                    tabulate([[*row[0], row[1]] for row in table_diff[1]],
+                             headers=[*["_" for i in range(len(table_diff[1][0]))], "changes"])
+                ])
+
+        return tpl_number_of_rows.render(data=data)
+
+
+class SchemaTables(Watcher):
     """
     Watch for tables added/removed in schema
     """
@@ -212,12 +300,10 @@ class WatcherTablesInSchema(Watcher):
     @staticmethod
     def report(diff) -> str:
 
-        return tpl_tables_in_schema.render(
-            data=diff
-        )
+        return tpl_schema_tables.render(data=diff)
 
 
-class WatcherColumnsInSchema(Watcher):
+class SchemaColumns(Watcher):
     """
     Watch for columns added/removed considering all tables of a schema at a time
     """
@@ -253,12 +339,10 @@ class WatcherColumnsInSchema(Watcher):
     @staticmethod
     def report(diff) -> str:
 
-        return tpl_columns_in_schema.render(
-            data=diff
-        )
+        return tpl_schema_columns.render(data=diff)
 
 
-class WatcherTableChange(Watcher):
+class TableChange(Watcher):
     """
     Watch for table changes
     """
@@ -315,6 +399,4 @@ class WatcherTableChange(Watcher):
     @staticmethod
     def report(diff) -> str:
 
-        return tpl_table_change.render(
-            changed_tables=diff
-        )
+        return tpl_table_change.render(changed_tables=diff)

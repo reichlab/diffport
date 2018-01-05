@@ -40,6 +40,115 @@ def get_diffp(path, config, url):
     return diffp
 
 
+class TestNumberOfRowsHash:
+    """
+    Tests for number-of-rows-hash
+    """
+
+    config_basic = [{
+        "name": "number-of-rows-hash",
+        "config": [
+            {
+                "table": "table_basic"
+            }
+        ]
+    }]
+
+    config_grouped = [{
+        "name": "number-of-rows-hash",
+        "config": [
+            {
+                "groupby": ["g_one", "g_two"],
+                "table": "table_grouped"
+            }
+        ]
+    }]
+
+    def init_db(self, db):
+        # Setup basic table
+        db.query(f"CREATE TABLE table_basic (id SERIAL PRIMARY KEY, one INTEGER, two INTEGER);")
+        db.query(f"CREATE TABLE table_grouped (id SERIAL PRIMARY KEY, g_one TEXT, g_two TEXT, num INTEGER);")
+
+    def seed_db(self, db):
+        for _ in range(20):
+            db.query(f"INSERT INTO table_basic(one, two) VALUES ({randint(0, 100)}, {randint(0, 100)});")
+
+        for _ in range(20):
+            db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('elec', 'a', {randint(0, 100)});")
+            db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('elec', 'b', {randint(0, 100)});")
+            db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('elec', 'c', {randint(0, 100)});")
+            db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'x', {randint(0, 100)});")
+            db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'y', {randint(0, 100)});")
+
+        # Rows for removal
+        # 5555x are removed, 1111x are not
+        db.query(f"INSERT INTO table_basic(one, two) VALUES (55555, 55555);")
+
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('elec', 'a', 55555);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'x', 55555);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'x', 55555);")
+
+    def add_rows(self, db):
+        db.query(f"INSERT INTO table_basic(one, two) VALUES (11111, 11111);")
+        db.query(f"INSERT INTO table_basic(one, two) VALUES (11111, 11111);")
+
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('elec', 'a', 11111);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'y', 11111);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'y', 11111);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'z', 11111);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'z', 11111);")
+        db.query(f"INSERT INTO table_grouped(g_one, g_two, num) VALUES ('mech', 'z', 11111);")
+
+    def remove_rows(self, db):
+        db.query(f"DELETE FROM table_basic WHERE one = 55555;")
+        db.query(f"DELETE FROM table_grouped WHERE num = 55555;")
+
+        # Remove a grouping completely
+        db.query(f"DELETE FROM table_grouped WHERE g_two = 'b'")
+
+    def clean_db(self, db):
+        db.query(f"DROP TABLE table_basic;")
+        db.query(f"DROP TABLE table_grouped;")
+
+    def test_diff_basic(self, tmpdir, pgurl):
+        diffp = get_diffp(tmpdir, self.config_basic, pgurl)
+        self.init_db(diffp.db)
+        self.seed_db(diffp.db)
+        old_hash = diffp.save_snapshot()
+        self.add_rows(diffp.db)
+        self.remove_rows(diffp.db)
+        new_hash = diffp.save_snapshot()
+        self.clean_db(diffp.db)
+
+        diff = [
+            ["table_basic", {"removed": 1, "added": 2}, "basic"]
+        ]
+        report = NumberOfRowsHash.report(diff)
+        assert diffp.diff(old_hash, new_hash).endswith(report)
+
+    def test_diff_grouped(self, tmpdir, pgurl):
+        diffp = get_diffp(tmpdir, self.config_grouped, pgurl)
+        self.init_db(diffp.db)
+        self.seed_db(diffp.db)
+        old_hash = diffp.save_snapshot()
+        self.add_rows(diffp.db)
+        self.remove_rows(diffp.db)
+        new_hash = diffp.save_snapshot()
+        self.clean_db(diffp.db)
+
+        diff = [
+            ["table_grouped",
+             [(['elec', 'a'], {"removed": 1, "added": 1}),
+              (['mech', 'x'], {"removed": 2, "added": 0}),
+              (['mech', 'y'], {"removed": 0, "added": 2}),
+              (['elec', 'b'], {"removed": 20, "added": 0}),
+              (['mech', 'z'], {"removed": 0, "added": 3})],
+             "grouped"]
+        ]
+        report = NumberOfRowsHash.report(diff)
+        assert diffp.diff(old_hash, new_hash).endswith(report)
+
+
 class TestNumberOfRows:
     """
     Tests for number-of-rows
@@ -121,10 +230,9 @@ class TestNumberOfRows:
         self.clean_db(diffp.db)
 
         diff = [
-            ["table_basic", {"removed": 1, "added": 2}, "basic"]
+            ["table_basic", 1, "basic"]
         ]
-        report = WatcherNumberOfRows.report(diff)
-        print(diffp.diff(old_hash, new_hash))
+        report = NumberOfRows.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
     def test_diff_grouped(self, tmpdir, pgurl):
@@ -139,14 +247,13 @@ class TestNumberOfRows:
 
         diff = [
             ["table_grouped",
-             [(['elec', 'a'], {"removed": 1, "added": 1}),
-              (['mech', 'x'], {"removed": 2, "added": 0}),
-              (['mech', 'y'], {"removed": 0, "added": 2}),
-              (['elec', 'b'], {"removed": 20, "added": 0}),
-              (['mech', 'z'], {"removed": 0, "added": 3})],
+             [(['mech', 'x'], -2),
+              (['mech', 'y'], 2),
+              (['elec', 'b'], -20),
+              (['mech', 'z'], 3)],
              "grouped"]
         ]
-        report = WatcherNumberOfRows.report(diff)
+        report = NumberOfRows.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
@@ -203,7 +310,7 @@ class TestTablesInSchema:
                 "added": ["tab_two"]
             }]
         ]
-        report = WatcherTablesInSchema.report(diff)
+        report = SchemaTables.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
@@ -261,7 +368,7 @@ class TestColumnsInSchema:
                 "added": []
             }]
         ]
-        report = WatcherColumnsInSchema.report(diff)
+        report = SchemaColumns.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)
 
 
@@ -319,5 +426,5 @@ class TestTableChange:
         self.clean_db(diffp.db)
 
         diff = self.to_change
-        report = WatcherTableChange.report(diff)
+        report = TableChange.report(diff)
         assert diffp.diff(old_hash, new_hash).endswith(report)

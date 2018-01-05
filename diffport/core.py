@@ -7,21 +7,23 @@ import hashlib
 import json
 import sys
 import time
+from .watchers import (
+    NumberOfRowsHash, NumberOfRows,
+    SchemaTables, SchemaColumns,
+    TableChange
+)
 from datetime import datetime
 from pathlib import Path
 from typing import Dict
-from .watchers import (
-    WatcherNumberOfRows, WatcherTablesInSchema,
-    WatcherColumnsInSchema, WatcherTableChange
-)
 from .store import StoreDirectory
 
 
 WATCHER_MAP = {
-    "number-of-rows": WatcherNumberOfRows,
-    "tables-in-schema": WatcherTablesInSchema,
-    "columns-in-schema": WatcherColumnsInSchema,
-    "table-change": WatcherTableChange
+    "number-of-rows-hash": NumberOfRowsHash,
+    "number-of-rows": NumberOfRows,
+    "tables-in-schema": SchemaTables,
+    "columns-in-schema": SchemaColumns,
+    "table-change": TableChange
 }
 
 
