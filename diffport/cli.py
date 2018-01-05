@@ -53,7 +53,7 @@ def warn(text, end="\n"):
 
 
 def main():
-    args = docopt(__doc__, argv=sys.argv[1:], version="v0.2.3")
+    args = docopt(__doc__, argv=sys.argv[1:], version="v0.3.0")
 
     config_file = Path(args["--config"])
     store_path = config_file.parent.joinpath("diffport.d")
