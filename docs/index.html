@@ -1,0 +1,116 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>diffport 0.2.3 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-diffport-s-documentation">
+<h1>Welcome to diffport’s documentation!<a class="headerlink" href="#welcome-to-diffport-s-documentation" title="Permalink to this headline">¶</a></h1>
+<a class="reference external image-reference" href="https://travis-ci.org/reichlab/diffport"><img alt="https://img.shields.io/travis/reichlab/diffport.svg?style=flat-square" src="https://img.shields.io/travis/reichlab/diffport.svg?style=flat-square" /></a>
+<a class="reference external image-reference" href="https://pypi.python.org/pypi/diffport"><img alt="https://img.shields.io/pypi/v/diffport.svg?style=flat-square" src="https://img.shields.io/pypi/v/diffport.svg?style=flat-square" /></a>
+<p>Diffport is a database <em>summary diff</em> reporting tool. It helps in maintaining,
+diffing and reporting summaries from a database based on a set of <em>watchers</em>. It
+currently works (and is tested) under postgres.</p>
+<p>It works by using a set of <em>watchers</em> to take snapshots of database at different
+times and then producing a difference report when asked for it. These watchers
+define what information (summary) to take snapshot of.</p>
+<div class="section" id="usage">
+<span id="id1"></span><h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h2>
+<p>Install diffport:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">diffport</span>
+</pre></div>
+</div>
+<p>Setup a config file specifying the watchers you need with their own
+configurations. An example follows:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># diffport.yaml</span>
+<span class="o">-</span> <span class="n">name</span><span class="p">:</span> <span class="n">number</span><span class="o">-</span><span class="n">of</span><span class="o">-</span><span class="n">rows</span>
+  <span class="n">config</span><span class="p">:</span>
+    <span class="n">groupby</span><span class="p">:</span>
+      <span class="o">-</span> <span class="o">&lt;</span><span class="n">groupby</span><span class="o">-</span><span class="n">column</span><span class="o">-</span><span class="n">one</span><span class="o">&gt;</span>
+      <span class="o">-</span> <span class="o">&lt;</span><span class="n">groupby</span><span class="o">-</span><span class="n">column</span><span class="o">-</span><span class="n">two</span><span class="o">&gt;</span>
+    <span class="n">table</span><span class="p">:</span> <span class="o">&lt;</span><span class="n">table</span><span class="o">-</span><span class="n">name</span><span class="o">&gt;</span>
+
+<span class="o">-</span> <span class="n">name</span><span class="p">:</span> <span class="n">tables</span><span class="o">-</span><span class="ow">in</span><span class="o">-</span><span class="n">schema</span>
+  <span class="n">config</span><span class="p">:</span>
+    <span class="o">-</span> <span class="o">&lt;</span><span class="n">schema</span><span class="o">-</span><span class="n">one</span><span class="o">&gt;</span>
+    <span class="o">-</span> <span class="o">&lt;</span><span class="n">schema</span><span class="o">-</span><span class="n">two</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>The first watcher (<code class="docutils literal"><span class="pre">number-of-rows</span></code>) keeps the count of rows in table
+<code class="docutils literal"><span class="pre">&lt;table-name</span></code>, grouped by columns <code class="docutils literal"><span class="pre">&lt;groupby-column-one&gt;</span></code> and
+<code class="docutils literal"><span class="pre">&lt;groupby-column-two&gt;</span></code>. The second watcher <code class="docutils literal"><span class="pre">tables-in-schema</span></code> keeps the list
+of tables in each of the schema provided in <em>its</em> config.</p>
+<p>More details about these watchers is given in the section on <a class="reference internal" href="#watchers"><span class="std std-ref">Watchers</span></a>.</p>
+</div>
+<div class="section" id="watchers">
+<span id="id2"></span><h2>Watchers<a class="headerlink" href="#watchers" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="development">
+<span id="id3"></span><h2>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html#document-index">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Reich Lab.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

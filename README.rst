@@ -7,7 +7,7 @@ diffport
 .. image:: https://img.shields.io/pypi/v/diffport.svg?style=flat-square
     :target: https://pypi.python.org/pypi/diffport
 
-Diffport is a database summary diff reporting tool. It helps in maintaining,
+Diffport is a database *summary diff* reporting tool. It helps in maintaining,
 diffing and reporting summaries from a database based on a set of *watchers*. It
 currently works (and is tested) under postgres.
 
