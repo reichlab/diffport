@@ -29,7 +29,6 @@ import sys
 import yaml
 from .core import Diffport
 from .connection import get_connection_string
-from .exceptions import ConfigError
 from colorama import Fore, Back, Style
 from datetime import datetime
 from docopt import docopt  # type: ignore
@@ -59,7 +58,7 @@ def main():
     store_path = config_file.parent.joinpath("diffport.d")
 
     if not config_file.is_file():
-        raise ConfigError("Config file not found")
+        raise Exception("Config file not found")
 
     with config_file.open() as fp:
         diffp = Diffport(yaml.load(fp), store_path)
