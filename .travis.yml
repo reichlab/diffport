@@ -7,7 +7,7 @@ services:
 
 install:
   - "python setup.py develop"
-  - "pip install mypy sphinx"
+  - "pip install mypy"
 
 before_script:
   - psql -c "create database diffport_test_db;" -U postgres
