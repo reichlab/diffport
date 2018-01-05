@@ -38,4 +38,4 @@ The first watcher (``number-of-rows``) keeps the count of rows in table
 of tables in each of the schema provided in *its* config.
 
 For more details and usage instructions, head over to the project's
-documentation `here<http://reichlab.io/diffport>`_.
+documentation `here <http://reichlab.io/diffport>`_.
