@@ -8,10 +8,13 @@ from typing import Dict, List, Any, Tuple, Union
 from .templates import *
 from functools import reduce
 from copy import deepcopy
+from pydash import py_
 
 
+# A snapshot with config and snaplist
 SnapItem = Tuple[Union[str, List[str]], Any]
 SnapList = List[SnapItem]
+Snap = Dict[str, Union[SnapList, Dict]]
 
 
 def items_common(a: SnapList, b: SnapList) -> Tuple[SnapList, SnapList]:
@@ -47,7 +50,7 @@ class Watcher(ABC):
 
     @staticmethod
     @abstractmethod
-    def take_snapshot(db, config: Dict):
+    def take_snapshot(db, config: Dict) -> Snap:
         """
         Return a snapshot dictionary using the config and db.
         """
@@ -55,7 +58,7 @@ class Watcher(ABC):
 
     @staticmethod
     @abstractmethod
-    def diff(old: SnapList, new: SnapList):
+    def diff(old_snap: Snap, new_snap: Snap):
         """
         Return a dictionary representing the diff between old and new snapshot.
         The output goes into report function for getting a markdown string.
@@ -78,7 +81,7 @@ class NumberOfRowsHash(Watcher):
     """
 
     @staticmethod
-    def take_snapshot(db, config: Any) -> SnapList:
+    def take_snapshot(db, config: Any) -> Snap:
         """
         Take snapshot for number of rows in given table grouped by asked fields
 
@@ -108,11 +111,14 @@ class NumberOfRowsHash(Watcher):
                 stmt = f"SELECT md5({table_config['table']}::text) as hash FROM {table_config['table']}"
                 return [r["hash"] for r in db.query(stmt)]
 
-        return [(tc["table"], _get_table_hashes(tc)) for tc in config]
+        return {
+            "config": config,
+            "data": [(tc["table"], _get_table_hashes(tc)) for tc in config]
+        }
 
     @staticmethod
-    def diff(old: SnapList, new: SnapList):
-
+    def diff(old_snap: Snap, new_snap: Snap):
+        old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
 
         def _get_diff(old_hashes, new_hashes, skip=False):
@@ -152,22 +158,28 @@ class NumberOfRowsHash(Watcher):
 
                 output.append([row_old[0], col_set_diff, "grouped"])
 
-        return output
+        return {
+            "config": new_snap["config"],
+            "data": output
+        }
 
     @staticmethod
     def report(diff) -> str:
         data = []
-        for table_diff in diff:
+        for table_diff in diff["data"]:
             if table_diff[-1] == "basic":
                 data.append([
                     table_diff[0],
                     f"{table_diff[1]['removed']} rows removed, {table_diff[1]['added']} added."
                 ])
             elif table_diff[-1] == "grouped":
+                table_name = table_diff[0]
+                headers = py_.find(diff["config"], lambda x: x["table"] == table_name)["groupby"]
+
                 data.append([
-                    table_diff[0],
+                    table_name,
                     tabulate([[*row[0], row[1]["removed"], row[1]["added"]] for row in table_diff[1]],
-                             headers=[*["_" for i in range(len(table_diff[1][0]))], "rows removed", "rows added"])
+                             headers=[*headers, "rows removed", "rows added"])
                 ])
 
         return tpl_number_of_rows_hash.render(data=data)
@@ -179,7 +191,7 @@ class NumberOfRows(Watcher):
     """
 
     @staticmethod
-    def take_snapshot(db, config: Any) -> SnapList:
+    def take_snapshot(db, config: Any) -> Snap:
         """
         Take snapshot for number of rows in given table grouped by asked fields
 
@@ -210,11 +222,14 @@ class NumberOfRows(Watcher):
                 stmt = f"SELECT count(*) as count FROM {table_config['table']}"
                 return db.query(stmt).next()["count"]
 
-        return [(tc["table"], _get_table_counts(tc)) for tc in config]
+        return {
+            "config": config,
+            "data": [(tc["table"], _get_table_counts(tc)) for tc in config]
+        }
 
     @staticmethod
-    def diff(old: SnapList, new: SnapList):
-
+    def diff(old_snap: Snap, new_snap: Snap):
+        old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
 
         output = [] # type: Any
@@ -246,19 +261,25 @@ class NumberOfRows(Watcher):
 
                 output.append([row_old[0], col_set_diff, "grouped"])
 
-        return output
+        return {
+            "config": new_snap["config"],
+            "data": output
+        }
 
     @staticmethod
     def report(diff) -> str:
         data = []
-        for table_diff in diff:
+        for table_diff in diff["data"]:
             if table_diff[-1] == "basic":
                 data.append([table_diff[0], f"Changes: {table_diff[1]}"])
             elif table_diff[-1] == "grouped":
+                table_name = table_diff[0]
+                headers = py_.find(diff["config"], lambda x: x["table"] == table_name)["groupby"]
+
                 data.append([
-                    table_diff[0],
+                    table_name,
                     tabulate([[*row[0], row[1]] for row in table_diff[1]],
-                             headers=[*["_" for i in range(len(table_diff[1][0]))], "changes"])
+                             headers=[*headers, "changes"])
                 ])
 
         return tpl_number_of_rows.render(data=data)
@@ -270,7 +291,7 @@ class SchemaTables(Watcher):
     """
 
     @staticmethod
-    def take_snapshot(db, config: Dict) -> SnapList:
+    def take_snapshot(db, config: Dict) -> Snap:
         """
         Save list of tables in given schema
 
@@ -281,10 +302,14 @@ class SchemaTables(Watcher):
             res = db.query(f"SELECT table_name FROM information_schema.tables WHERE table_schema = '{schema}'")
             return [r["table_name"] for r in res]
 
-        return [(schema, get_schema_tables(schema)) for schema in config]
+        return {
+            "config": config,
+            "data": [(schema, get_schema_tables(schema)) for schema in config]
+        }
 
     @staticmethod
-    def diff(old: SnapList, new: SnapList):
+    def diff(old_snap: Snap, new_snap: Snap):
+        old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
         output = []
         for row_old, row_new in zip(old, new):
@@ -295,12 +320,15 @@ class SchemaTables(Watcher):
                     "removed": removed_tbls,
                     "added": added_tbls,
                 }])
-        return output
+
+        return {
+            "config": config,
+            "data": output
+        }
 
     @staticmethod
     def report(diff) -> str:
-
-        return tpl_schema_tables.render(data=diff)
+        return tpl_schema_tables.render(data=diff["data"])
 
 
 class SchemaColumns(Watcher):
@@ -309,7 +337,7 @@ class SchemaColumns(Watcher):
     """
 
     @staticmethod
-    def take_snapshot(db, config: Dict) -> SnapList:
+    def take_snapshot(db, config: Dict) -> Snap:
         """
         Save all distinct table in given schema
 
@@ -320,10 +348,14 @@ class SchemaColumns(Watcher):
             res = db.query(f"SELECT DISTINCT column_name FROM information_schema.columns WHERE table_schema = '{schema}'")
             return [r["column_name"] for r in res]
 
-        return [(schema, get_schema_columns(schema)) for schema in config]
+        return {
+            "config": config,
+            "data": [(schema, get_schema_columns(schema)) for schema in config]
+        }
 
     @staticmethod
-    def diff(old: SnapList, new: SnapList):
+    def diff(old_snap: Snap, new_snap: Snap):
+        old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
         output = []
         for row_old, row_new in zip(old, new):
@@ -334,12 +366,15 @@ class SchemaColumns(Watcher):
                     "removed": removed_cols,
                     "added": added_cols,
                 }])
-        return output
+
+        return {
+            "config": new_snap["config"],
+            "data": output
+        }
 
     @staticmethod
     def report(diff) -> str:
-
-        return tpl_schema_columns.render(data=diff)
+        return tpl_schema_columns.render(data=diff["data"])
 
 
 class TableChange(Watcher):
@@ -348,7 +383,7 @@ class TableChange(Watcher):
     """
 
     @staticmethod
-    def take_snapshot(db, config: Dict) -> SnapList:
+    def take_snapshot(db, config: Dict) -> Snap:
         """
         Save all table hashes in given schema
 
@@ -383,10 +418,14 @@ class TableChange(Watcher):
               ) AS t""")
             return res.next()["hash"]
 
-        return [(table, _table_hash(table)) for table in tables]
+        return {
+            "config": config,
+            "data": [(table, _table_hash(table)) for table in tables]
+        }
 
     @staticmethod
-    def diff(old: SnapList, new: SnapList):
+    def diff(old_snap: Snap, new_snap: Snap):
+        old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
 
         changed = []
@@ -394,9 +433,11 @@ class TableChange(Watcher):
             if row_new[1] != row_old[1]:
                 changed.append(row_old[0])
 
-        return changed
+        return {
+            "config": new_snap["config"],
+            "data": changed
+        }
 
     @staticmethod
     def report(diff) -> str:
-
-        return tpl_table_change.render(changed_tables=diff)
+        return tpl_table_change.render(changed_tables=diff["data"])

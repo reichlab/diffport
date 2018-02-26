@@ -14,6 +14,7 @@ setup(
     author_email="lepisma@fastmail.com",
     url=project_url,
     install_requires=[
+        "pydash",
         "colorama",
         "docopt",
         "dataset",
