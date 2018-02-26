@@ -100,9 +100,12 @@ def test_diff(diffp):
     old_hash = diffp.save_snapshot()
     diffp.db.query("CREATE TABLE scm.second (num INTEGER);")
     new_hash = diffp.save_snapshot()
-    diff = [["scm", {
-        "removed": [],
-        "added": ["second"]
-    }]]
+    diff = {
+        "config": ["scm"],
+        "data": [["scm", {
+            "removed": [],
+            "added": ["second"]
+        }]]
+    }
     report = SchemaTables.report(diff)
     assert diffp.report(old_hash, new_hash).endswith(report)

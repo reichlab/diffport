@@ -120,9 +120,10 @@ class TestNumberOfRowsHash:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["table_basic", {"removed": 1, "added": 2}, "basic"]
-        ]
+        diff = {
+            "config": [{ "table": "table_basic" }],
+            "data": [["table_basic", {"removed": 1, "added": 2}, "basic"]]
+        }
         report = NumberOfRowsHash.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -136,15 +137,18 @@ class TestNumberOfRowsHash:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["table_grouped",
-             [(['elec', 'a'], {"removed": 1, "added": 1}),
-              (['mech', 'x'], {"removed": 2, "added": 0}),
-              (['mech', 'y'], {"removed": 0, "added": 2}),
-              (['elec', 'b'], {"removed": 20, "added": 0}),
-              (['mech', 'z'], {"removed": 0, "added": 3})],
-             "grouped"]
-        ]
+        diff = {
+            "config": [{ "groupby": ["g_one", "g_two"], "table": "table_grouped" }],
+            "data": [
+                ["table_grouped",
+                 [(['elec', 'a'], {"removed": 1, "added": 1}),
+                  (['mech', 'x'], {"removed": 2, "added": 0}),
+                  (['mech', 'y'], {"removed": 0, "added": 2}),
+                  (['elec', 'b'], {"removed": 20, "added": 0}),
+                  (['mech', 'z'], {"removed": 0, "added": 3})],
+                 "grouped"]
+            ]
+        }
         report = NumberOfRowsHash.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -229,9 +233,10 @@ class TestNumberOfRows:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["table_basic", 1, "basic"]
-        ]
+        diff = {
+            "config": [{ "table": "table_basic" }],
+            "data": [["table_basic", 1, "basic"]]
+        }
         report = NumberOfRows.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -245,14 +250,17 @@ class TestNumberOfRows:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["table_grouped",
-             [(['mech', 'x'], -2),
-              (['mech', 'y'], 2),
-              (['elec', 'b'], -20),
-              (['mech', 'z'], 3)],
-             "grouped"]
-        ]
+        diff = {
+            "config": [{ "groupby": ["g_one", "g_two"], "table": "table_grouped" }],
+            "data": [
+                ["table_grouped",
+                 [(['mech', 'x'], -2),
+                  (['mech', 'y'], 2),
+                  (['elec', 'b'], -20),
+                  (['mech', 'z'], 3)],
+                 "grouped"]
+            ]
+        }
         report = NumberOfRows.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -300,16 +308,19 @@ class TestTablesInSchema:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["scm_one", {
-                "removed": ["tab_one"],
-                "added": ["tab_three"]
-            }],
-            ["scm_two", {
-                "removed": [],
-                "added": ["tab_two"]
-            }]
-        ]
+        diff = {
+            "config": ["scm_one", "scm_two", "scm_three"],
+            "data": [
+                ["scm_one", {
+                    "removed": ["tab_one"],
+                    "added": ["tab_three"]
+                }],
+                ["scm_two", {
+                    "removed": [],
+                    "added": ["tab_two"]
+                }]
+            ]
+        }
         report = SchemaTables.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -358,16 +369,19 @@ class TestColumnsInSchema:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = [
-            ["scm_one", {
-                "removed": ["pruned_col"],
-                "added": ["added_col"]
-            }],
-            ["scm_two", {
-                "removed": ["pruned_col"],
-                "added": []
-            }]
-        ]
+        diff = {
+            "config": ["scm_one", "scm_two", "scm_three"],
+            "data": [
+                ["scm_one", {
+                    "removed": ["pruned_col"],
+                    "added": ["added_col"]
+                }],
+                ["scm_two", {
+                    "removed": ["pruned_col"],
+                    "added": []
+                }]
+            ]
+        }
         report = SchemaColumns.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)
 
@@ -425,6 +439,12 @@ class TestTableChange:
         new_hash = diffp.save_snapshot()
         self.clean_db(diffp.db)
 
-        diff = self.to_change
+        diff = {
+            "config": {
+                "schemas": ["scm_one", "scm_two"],
+                "tables": ["tab_one", "tab_two"]
+            },
+            "data": self.to_change
+        }
         report = TableChange.report(diff)
         assert diffp.report(old_hash, new_hash).endswith(report)

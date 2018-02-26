@@ -322,7 +322,7 @@ class SchemaTables(Watcher):
                 }])
 
         return {
-            "config": config,
+            "config": new_snap["config"],
             "data": output
         }
 
