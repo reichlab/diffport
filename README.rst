@@ -22,20 +22,24 @@ configuration needs. An example follows::
    # diffport.yaml
    - name: number-of-rows
      config:
-       groupby:
-         - <groupby-column-one>
-         - <groupby-column-two>
-       table: <table-name>
+       - groupby:
+           - disease
+           - date_sick_year
+         table: unique_case_data
 
    - name: tables-in-schema
      config:
-       - <schema-one>
-       - <schema-two>
+       - original_data
 
-The first watcher (``number-of-rows``) keeps the count of rows in table
-``<table-name``, grouped by columns ``<groupby-column-one>`` and
-``<groupby-column-two>``. The second watcher ``tables-in-schema`` keeps the list
-of tables in each of the schema provided in *its* config.
+   - name: columns-in-schema
+     config:
+       - original_data
+
+   - name: table-change
+     config:
+       schemas:
+         - original_data
+       tables: []
 
 For more details and usage instructions, head over to the project's
 documentation `here <http://reichlab.io/diffport>`_.
