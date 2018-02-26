@@ -1,0 +1,555 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>diffport.watchers &#8212; diffport 0.2.3 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '0.2.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for diffport.watchers</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Modules for watchers</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">abc</span> <span class="k">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">tabulate</span> <span class="k">import</span> <span class="n">tabulate</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Callable</span>
+<span class="kn">from</span> <span class="nn">.templates</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="k">import</span> <span class="n">partial</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">pydash</span> <span class="k">import</span> <span class="n">py_</span>
+
+
+<span class="c1"># A snapshot with config and snaplist</span>
+<span class="n">SnapItem</span> <span class="o">=</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="n">Any</span><span class="p">]</span>
+<span class="n">SnapList</span> <span class="o">=</span> <span class="n">List</span><span class="p">[</span><span class="n">SnapItem</span><span class="p">]</span>
+<span class="n">Snap</span> <span class="o">=</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">items_common</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">SnapList</span><span class="p">,</span> <span class="n">SnapList</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return new [a, b] for SnapItems that are present in a AND b.</span>
+<span class="sd">    The items are identified using the first element of each row and are returned</span>
+<span class="sd">    ordered as in a.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">n_a</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">n_b</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">item_id</span><span class="p">,</span> <span class="n">item_data</span> <span class="ow">in</span> <span class="n">a</span><span class="p">:</span>
+        <span class="n">idx_b</span> <span class="o">=</span> <span class="n">py_</span><span class="o">.</span><span class="n">find_index</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">item_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">idx_b</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">n_a</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">item_id</span><span class="p">,</span> <span class="n">item_data</span><span class="p">))</span>
+            <span class="n">n_b</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">item_id</span><span class="p">,</span> <span class="n">b</span><span class="p">[</span><span class="n">idx_b</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+
+    <span class="k">return</span> <span class="n">n_a</span><span class="p">,</span> <span class="n">n_b</span>
+
+
+<span class="k">def</span> <span class="nf">items_sub</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SnapList</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return SnapItems from a which are not in b.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">py_</span><span class="o">.</span><span class="n">difference_by</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+
+<span class="k">def</span> <span class="nf">find_col_diff</span><span class="p">(</span><span class="n">col_data_old</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">,</span> <span class="n">col_data_new</span><span class="p">:</span> <span class="n">SnapList</span><span class="p">,</span> <span class="n">diff_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return differences between columns using the diff_fn.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    col_data_old : SnapList</span>
+<span class="sd">        Tuple of two items. First is column grouping identifier, e.g. for a</span>
+<span class="sd">        table with grouping [&#39;city&#39;, &#39;team&#39;], this value might be</span>
+<span class="sd">        [&#39;Sydney&#39;, &#39;Sydney Sixers&#39;]. Second item is (old) data for that grouping.</span>
+<span class="sd">    col_data_new : SnapList</span>
+<span class="sd">        Similar as col_data_old but from the new snapshot.</span>
+<span class="sd">    diff_fn : Callable(old, new)</span>
+<span class="sd">        Callable which returns an object representing difference between two</span>
+<span class="sd">        data as defined in the SnapLists above. It should also handle `None` as</span>
+<span class="sd">        parameter. It should return `None` for no diff.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># type: SnapList</span>
+
+    <span class="c1"># First work on the common items</span>
+    <span class="n">common_old</span><span class="p">,</span> <span class="n">common_new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">col_data_old</span><span class="p">,</span> <span class="n">col_data_new</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">old_col_set</span><span class="p">,</span> <span class="n">new_col_set</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">common_old</span><span class="p">,</span> <span class="n">common_new</span><span class="p">):</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">diff_fn</span><span class="p">(</span><span class="n">old_col_set</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">new_col_set</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">diff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">old_col_set</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">diff</span><span class="p">))</span>
+
+    <span class="c1"># Now do only items which are only present in old data</span>
+    <span class="n">only_removed</span> <span class="o">=</span> <span class="n">items_sub</span><span class="p">(</span><span class="n">col_data_old</span><span class="p">,</span> <span class="n">col_data_new</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">col_set</span> <span class="ow">in</span> <span class="n">only_removed</span><span class="p">:</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">diff_fn</span><span class="p">(</span><span class="n">col_set</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">diff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">col_set</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">diff</span><span class="p">))</span>
+
+    <span class="c1"># Finally do items which are only in new data</span>
+    <span class="n">only_added</span> <span class="o">=</span> <span class="n">items_sub</span><span class="p">(</span><span class="n">col_data_new</span><span class="p">,</span> <span class="n">col_data_old</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">col_set</span> <span class="ow">in</span> <span class="n">only_added</span><span class="p">:</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="n">diff_fn</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">col_set</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">diff</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">col_set</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">diff</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">output</span>
+
+
+<div class="viewcode-block" id="Watcher"><a class="viewcode-back" href="../../development.html#diffport.watchers.Watcher">[docs]</a><span class="k">class</span> <span class="nc">Watcher</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+
+<div class="viewcode-block" id="Watcher.take_snapshot"><a class="viewcode-back" href="../../development.html#diffport.watchers.Watcher.take_snapshot">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a snapshot dictionary using the config and db.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+<div class="viewcode-block" id="Watcher.diff"><a class="viewcode-back" href="../../development.html#diffport.watchers.Watcher.diff">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a dictionary representing the diff between old and new snapshot.</span>
+<span class="sd">        The output goes into report function for getting a markdown string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div>
+
+<div class="viewcode-block" id="Watcher.report"><a class="viewcode-back" href="../../development.html#diffport.watchers.Watcher.report">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return a report in markdown format for given diff.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="o">...</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">NumberOfRowsHash</span><span class="p">(</span><span class="n">Watcher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Watch for changes in number of rows in tables. Return the number of rows removed</span>
+<span class="sd">    and added based on saved hash of each row.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Take snapshot for number of rows in given table grouped by asked fields</span>
+
+<span class="sd">        config:</span>
+<span class="sd">          [{groupby: [cols, ...]</span>
+<span class="sd">            table: &lt;string&gt;},</span>
+<span class="sd">           ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_get_table_hashes</span><span class="p">(</span><span class="n">table_config</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s2">&quot;groupby&quot;</span> <span class="ow">in</span> <span class="n">table_config</span><span class="p">:</span>
+                <span class="n">group_fields</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">table_config</span><span class="p">[</span><span class="s2">&quot;groupby&quot;</span><span class="p">])</span>
+                <span class="n">select_fields</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{group_fields}</span><span class="s2">, md5(</span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2">::text) as hash&quot;</span>
+                <span class="n">stmt</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;SELECT </span><span class="si">{select_fields}</span><span class="s2"> FROM </span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2"> ORDER BY </span><span class="si">{group_fields}</span><span class="s2">&quot;</span>
+
+                <span class="n">grouped_data</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">stmt</span><span class="p">):</span>
+                    <span class="n">group_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">res</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">table_config</span><span class="p">[</span><span class="s2">&quot;groupby&quot;</span><span class="p">]]</span>
+
+                    <span class="n">group_values_idx</span> <span class="o">=</span> <span class="n">py_</span><span class="o">.</span><span class="n">find_index</span><span class="p">(</span><span class="n">grouped_data</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">group_values</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">group_values_idx</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                        <span class="n">grouped_data</span><span class="p">[</span><span class="n">group_values_idx</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;hash&quot;</span><span class="p">])</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">grouped_data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">group_values</span><span class="p">,</span> <span class="p">[</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;hash&quot;</span><span class="p">]]])</span>
+
+                <span class="k">return</span> <span class="n">grouped_data</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">stmt</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;SELECT md5(</span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2">::text) as hash FROM </span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2">&quot;</span>
+                <span class="k">return</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;hash&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">stmt</span><span class="p">)]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">tc</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">],</span> <span class="n">_get_table_hashes</span><span class="p">(</span><span class="n">tc</span><span class="p">))</span> <span class="k">for</span> <span class="n">tc</span> <span class="ow">in</span> <span class="n">config</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">old_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_get_diff</span><span class="p">(</span><span class="n">old_hashes</span><span class="p">,</span> <span class="n">new_hashes</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">old_hashes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">new_hashes</span><span class="p">))</span> <span class="p">}</span>
+            <span class="k">elif</span> <span class="n">new_hashes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">{</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">old_hashes</span><span class="p">)),</span> <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="mi">0</span> <span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">removed</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">old_hashes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">new_hashes</span><span class="p">))</span>
+                <span class="n">added</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">new_hashes</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">old_hashes</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">skip</span> <span class="ow">and</span> <span class="p">(</span><span class="n">removed</span> <span class="o">==</span> <span class="n">added</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="kc">None</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="p">{</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed</span><span class="p">,</span> <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="n">added</span> <span class="p">}</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># type: Any</span>
+        <span class="k">for</span> <span class="n">row_old</span><span class="p">,</span> <span class="n">row_new</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">str</span><span class="p">:</span>
+                <span class="c1"># This data is without grouping, each row_old/new[1] is like [&quot;hash1&quot;, &quot;hash2&quot;, ...]</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">_get_diff</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">diff</span><span class="p">,</span> <span class="s2">&quot;basic&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># This is grouped data, each row_old/new[1] is like [[grouped-cols, ...], [hashes]]</span>
+                <span class="n">col_set_diff</span> <span class="o">=</span> <span class="n">find_col_diff</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">partial</span><span class="p">(</span><span class="n">_get_diff</span><span class="p">,</span> <span class="n">skip</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">col_set_diff</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">table_diff</span> <span class="ow">in</span> <span class="n">diff</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">table_diff</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;basic&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span>
+                    <span class="n">table_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                    <span class="n">f</span><span class="s2">&quot;</span><span class="si">{table_diff[1][&#39;removed&#39;]}</span><span class="s2"> rows removed, </span><span class="si">{table_diff[1][&#39;added&#39;]}</span><span class="s2"> added.&quot;</span>
+                <span class="p">])</span>
+            <span class="k">elif</span> <span class="n">table_diff</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;grouped&quot;</span><span class="p">:</span>
+                <span class="n">table_name</span> <span class="o">=</span> <span class="n">table_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">headers</span> <span class="o">=</span> <span class="n">py_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">table_name</span><span class="p">)[</span><span class="s2">&quot;groupby&quot;</span><span class="p">]</span>
+
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span>
+                    <span class="n">table_name</span><span class="p">,</span>
+                    <span class="n">tabulate</span><span class="p">([[</span><span class="o">*</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;removed&quot;</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;added&quot;</span><span class="p">]]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">table_diff</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                             <span class="n">headers</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">headers</span><span class="p">,</span> <span class="s2">&quot;rows removed&quot;</span><span class="p">,</span> <span class="s2">&quot;rows added&quot;</span><span class="p">])</span>
+                <span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">tpl_number_of_rows_hash</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">NumberOfRows</span><span class="p">(</span><span class="n">Watcher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Watch for changes in number of rows in tables and return only the difference.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Take snapshot for number of rows in given table grouped by asked fields</span>
+
+<span class="sd">        config:</span>
+<span class="sd">          [{groupby: [cols, ...]</span>
+<span class="sd">            table: &lt;string&gt;},</span>
+<span class="sd">           ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">_get_table_counts</span><span class="p">(</span><span class="n">table_config</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            For a table in config, if there is no groupby, return a tuple</span>
+<span class="sd">            like (table_name: str, count: int)</span>
+<span class="sd">            If there is a groupby field in config, return a the grouped counts in a list</span>
+<span class="sd">            where each item is a pair of group by field values and count.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
+            <span class="k">if</span> <span class="s2">&quot;groupby&quot;</span> <span class="ow">in</span> <span class="n">table_config</span><span class="p">:</span>
+                <span class="n">group_fields</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">table_config</span><span class="p">[</span><span class="s2">&quot;groupby&quot;</span><span class="p">])</span>
+                <span class="n">select_fields</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{group_fields}</span><span class="s2">, count(*) as count&quot;</span>
+                <span class="n">stmt</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;SELECT </span><span class="si">{select_fields}</span><span class="s2"> FROM </span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2"> GROUP BY </span><span class="si">{group_fields}</span><span class="s2"> ORDER BY </span><span class="si">{group_fields}</span><span class="s2">&quot;</span>
+
+                <span class="n">counts</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">res</span> <span class="ow">in</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">stmt</span><span class="p">):</span>
+                    <span class="n">counts</span><span class="o">.</span><span class="n">append</span><span class="p">([[</span><span class="n">res</span><span class="p">[</span><span class="n">field</span><span class="p">]</span> <span class="k">for</span> <span class="n">field</span> <span class="ow">in</span> <span class="n">table_config</span><span class="p">[</span><span class="s2">&quot;groupby&quot;</span><span class="p">]],</span> <span class="n">res</span><span class="p">[</span><span class="s2">&quot;count&quot;</span><span class="p">]])</span>
+                <span class="k">return</span> <span class="n">counts</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">stmt</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;SELECT count(*) as count FROM </span><span class="si">{table_config[&#39;table&#39;]}</span><span class="s2">&quot;</span>
+                <span class="k">return</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">stmt</span><span class="p">)</span><span class="o">.</span><span class="n">next</span><span class="p">()[</span><span class="s2">&quot;count&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">tc</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">],</span> <span class="n">_get_table_counts</span><span class="p">(</span><span class="n">tc</span><span class="p">))</span> <span class="k">for</span> <span class="n">tc</span> <span class="ow">in</span> <span class="n">config</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">old_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_get_diff</span><span class="p">(</span><span class="n">old_counts</span><span class="p">,</span> <span class="n">new_counts</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">old_counts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">new_counts</span>
+            <span class="k">elif</span> <span class="n">new_counts</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="o">-</span><span class="n">old_counts</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">new_counts</span> <span class="o">-</span> <span class="n">old_counts</span>
+                <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="n">diff</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">diff</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># type: Any</span>
+        <span class="k">for</span> <span class="n">row_old</span><span class="p">,</span> <span class="n">row_new</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">==</span> <span class="nb">int</span><span class="p">:</span>
+                <span class="c1"># This data is without grouping, each row_old/new[1] is a direct count</span>
+                <span class="n">diff</span> <span class="o">=</span> <span class="n">_get_diff</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">diff</span><span class="p">,</span> <span class="s2">&quot;basic&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># This is grouped data, each row_old/new[1] is like [[grouped-cols, ...], count]</span>
+                <span class="n">col_set_diff</span> <span class="o">=</span> <span class="n">find_col_diff</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">_get_diff</span><span class="p">)</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">col_set_diff</span><span class="p">,</span> <span class="s2">&quot;grouped&quot;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">table_diff</span> <span class="ow">in</span> <span class="n">diff</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">table_diff</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;basic&quot;</span><span class="p">:</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">table_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">f</span><span class="s2">&quot;Changes: </span><span class="si">{table_diff[1]}</span><span class="s2">&quot;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">table_diff</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;grouped&quot;</span><span class="p">:</span>
+                <span class="n">table_name</span> <span class="o">=</span> <span class="n">table_diff</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">headers</span> <span class="o">=</span> <span class="n">py_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;table&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">table_name</span><span class="p">)[</span><span class="s2">&quot;groupby&quot;</span><span class="p">]</span>
+
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">([</span>
+                    <span class="n">table_name</span><span class="p">,</span>
+                    <span class="n">tabulate</span><span class="p">([[</span><span class="o">*</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">table_diff</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                             <span class="n">headers</span><span class="o">=</span><span class="p">[</span><span class="o">*</span><span class="n">headers</span><span class="p">,</span> <span class="s2">&quot;changes&quot;</span><span class="p">])</span>
+                <span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">tpl_number_of_rows</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">SchemaTables</span><span class="p">(</span><span class="n">Watcher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Watch for tables added/removed in schema</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save list of tables in given schema</span>
+
+<span class="sd">        config: [&lt;schema&gt;, ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">get_schema_tables</span><span class="p">(</span><span class="n">schema</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;SELECT table_name FROM information_schema.tables WHERE table_schema = &#39;</span><span class="si">{schema}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;table_name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">schema</span><span class="p">,</span> <span class="n">get_schema_tables</span><span class="p">(</span><span class="n">schema</span><span class="p">))</span> <span class="k">for</span> <span class="n">schema</span> <span class="ow">in</span> <span class="n">config</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">old_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row_old</span><span class="p">,</span> <span class="n">row_new</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+            <span class="n">removed_tbls</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">added_tbls</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">removed_tbls</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">added_tbls</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">{</span>
+                    <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed_tbls</span><span class="p">,</span>
+                    <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="n">added_tbls</span><span class="p">,</span>
+                <span class="p">}])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tpl_schema_tables</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+
+
+<span class="k">class</span> <span class="nc">SchemaColumns</span><span class="p">(</span><span class="n">Watcher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Watch for columns added/removed considering all tables of a schema at a time</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save all distinct table in given schema</span>
+
+<span class="sd">        config: [&lt;schema&gt;, ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">def</span> <span class="nf">get_schema_columns</span><span class="p">(</span><span class="n">schema</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;SELECT DISTINCT column_name FROM information_schema.columns WHERE table_schema = &#39;</span><span class="si">{schema}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">r</span><span class="p">[</span><span class="s2">&quot;column_name&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">schema</span><span class="p">,</span> <span class="n">get_schema_columns</span><span class="p">(</span><span class="n">schema</span><span class="p">))</span> <span class="k">for</span> <span class="n">schema</span> <span class="ow">in</span> <span class="n">config</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">old_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row_old</span><span class="p">,</span> <span class="n">row_new</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+            <span class="n">removed_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="n">added_cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">removed_cols</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">added_cols</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+                <span class="n">output</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">{</span>
+                    <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="n">removed_cols</span><span class="p">,</span>
+                    <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="n">added_cols</span><span class="p">,</span>
+                <span class="p">}])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">output</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tpl_schema_columns</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+
+
+<span class="k">class</span> <span class="nc">TableChange</span><span class="p">(</span><span class="n">Watcher</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Watch for table changes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">take_snapshot</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Snap</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Save all table hashes in given schema</span>
+
+<span class="sd">        config:</span>
+<span class="sd">          schemas:</span>
+<span class="sd">            - &lt;schema-one&gt;</span>
+<span class="sd">            - &lt;schema-two&gt;</span>
+<span class="sd">          tables:</span>
+<span class="sd">            - &lt;table-one&gt;</span>
+<span class="sd">            - &lt;table-two&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Create a list of tables to look for</span>
+        <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span> <span class="c1"># type: List[str]</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tables</span> <span class="o">+=</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;tables&quot;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="k">if</span> <span class="s2">&quot;schemas&quot;</span> <span class="ow">in</span> <span class="n">config</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">schema</span> <span class="ow">in</span> <span class="n">config</span><span class="p">[</span><span class="s2">&quot;schemas&quot;</span><span class="p">]:</span>
+                <span class="n">res</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;SELECT table_name FROM information_schema.tables WHERE table_schema = &#39;</span><span class="si">{schema}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+                <span class="n">tables</span> <span class="o">+=</span> <span class="p">[</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{schema}</span><span class="s2">.</span><span class="si">{r[&#39;table_name&#39;]}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">res</span><span class="p">]</span>
+
+        <span class="c1"># Create hash of tables</span>
+        <span class="k">def</span> <span class="nf">_table_hash</span><span class="p">(</span><span class="n">table</span><span class="p">):</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;&quot;&quot;SELECT md5(array_agg(md5((t.*)::varchar))::varchar) as hash</span>
+<span class="s2">              FROM (</span>
+<span class="s2">                SELECT *</span>
+<span class="s2">                  FROM </span><span class="si">{table}</span><span class="s2"></span>
+<span class="s2">                ORDER BY 1</span>
+<span class="s2">              ) AS t&quot;&quot;&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">next</span><span class="p">()[</span><span class="s2">&quot;hash&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">config</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="n">table</span><span class="p">,</span> <span class="n">_table_hash</span><span class="p">(</span><span class="n">table</span><span class="p">))</span> <span class="k">for</span> <span class="n">table</span> <span class="ow">in</span> <span class="n">tables</span><span class="p">]</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">diff</span><span class="p">(</span><span class="n">old_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">,</span> <span class="n">new_snap</span><span class="p">:</span> <span class="n">Snap</span><span class="p">):</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">old_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span>
+        <span class="n">old</span><span class="p">,</span> <span class="n">new</span> <span class="o">=</span> <span class="n">items_common</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">)</span>
+
+        <span class="n">changed</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row_old</span><span class="p">,</span> <span class="n">row_new</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">old</span><span class="p">,</span> <span class="n">new</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">row_new</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">row_old</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+                <span class="n">changed</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_old</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="n">new_snap</span><span class="p">[</span><span class="s2">&quot;config&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">changed</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">tpl_table_change</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">changed_tables</span><span class="o">=</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">])</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">diffport</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../usage.html">Usage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../development.html">Development</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Reich Lab.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

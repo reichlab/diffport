@@ -1,0 +1,222 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Development &#8212; diffport 0.2.3 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.2.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Usage" href="usage.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="development">
+<span id="id1"></span><h1>Development<a class="headerlink" href="#development" title="Permalink to this headline">¶</a></h1>
+<p>Diffport involves the following units:</p>
+<ol class="arabic simple">
+<li><em>Command line interface</em>. The code for this is in file <code class="docutils literal"><span class="pre">cli.py</span></code>.</li>
+<li><em>Core</em> module which reads config and delegates tasks to watchers. This is in
+the file <code class="docutils literal"><span class="pre">core.py</span></code>.</li>
+<li><em>Store</em> is an abstraction over the area where diffport is going to save
+snapshots. Its defined in <code class="docutils literal"><span class="pre">store.py</span></code>. Adding new store here means adding
+another class inheriting from <code class="docutils literal"><span class="pre">Store</span></code> abstract class. As an example, see
+the class <code class="docutils literal"><span class="pre">StoreDirectory</span></code> which keeps snapshots in a directory.</li>
+<li><em>DB connection</em>. A few functions related to database connection are in
+<code class="docutils literal"><span class="pre">connection.py</span></code>.</li>
+<li><em>Watchers</em>. Actual watchers are defined in <code class="docutils literal"><span class="pre">watchers.py</span></code> along with their
+report templates in <code class="docutils literal"><span class="pre">templates.py</span></code>. We will dissect watchers in more
+details later.</li>
+</ol>
+<div class="section" id="watchers">
+<h2>Watchers<a class="headerlink" href="#watchers" title="Permalink to this headline">¶</a></h2>
+<p>A watcher is defined by a bunch of functions grouped together (as static
+methods) in a class. We don’t maintain any state in a watcher and the class
+structure is only to modularize the functionality. These methods are enforced by
+the abstract class <code class="docutils literal"><span class="pre">Watcher</span></code> to have the following structure</p>
+<dl class="class">
+<dt id="diffport.watchers.Watcher">
+<em class="property">class </em><code class="descclassname">diffport.watchers.</code><code class="descname">Watcher</code><a class="reference internal" href="_modules/diffport/watchers.html#Watcher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#diffport.watchers.Watcher" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="staticmethod">
+<dt id="diffport.watchers.Watcher.diff">
+<em class="property">static </em><code class="descname">diff</code><span class="sig-paren">(</span><em>old_snap: typing.Dict[str, typing.Any], new_snap: typing.Dict[str, typing.Any]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/diffport/watchers.html#Watcher.diff"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#diffport.watchers.Watcher.diff" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a dictionary representing the diff between old and new snapshot.
+The output goes into report function for getting a markdown string.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="diffport.watchers.Watcher.report">
+<em class="property">static </em><code class="descname">report</code><span class="sig-paren">(</span><em>diff</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="_modules/diffport/watchers.html#Watcher.report"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#diffport.watchers.Watcher.report" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a report in markdown format for given diff.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="diffport.watchers.Watcher.take_snapshot">
+<em class="property">static </em><code class="descname">take_snapshot</code><span class="sig-paren">(</span><em>db</em>, <em>config: typing.Dict</em><span class="sig-paren">)</span> &#x2192; typing.Dict[str, typing.Any]<a class="reference internal" href="_modules/diffport/watchers.html#Watcher.take_snapshot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#diffport.watchers.Watcher.take_snapshot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a snapshot dictionary using the config and db.</p>
+</dd></dl>
+
+</dd></dl>
+
+<p>After reading the main config.yaml file, the <code class="docutils literal"><span class="pre">core</span></code> module of diffport invokes
+each involved watcher to take snapshot by providing a <code class="docutils literal"><span class="pre">db</span></code> object (which is a
+<a class="reference external" href="http://dataset.readthedocs.io/">dataset</a> instance) and that watcher’s config
+as read from the yaml file.</p>
+<p>Any new watcher needs to implement a new class with internally consistent
+methods (meaning that its <code class="docutils literal"><span class="pre">diff</span></code> method accepts the output from its own
+<code class="docutils literal"><span class="pre">take_snapshot</span></code> method). In what follows, we describe the general structure of
+these methods using the example of a simple watcher <code class="docutils literal"><span class="pre">SchemaTables</span></code> with the
+following config passed in:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Input config to SchemaTables</span>
+<span class="n">config</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="s2">&quot;processed_tables&quot;</span><span class="p">]</span>
+</pre></div>
+</div>
+<div class="section" id="take-snapshot">
+<h3><code class="docutils literal"><span class="pre">take_snapshot</span></code><a class="headerlink" href="#take-snapshot" title="Permalink to this headline">¶</a></h3>
+<p>Snapshot output from a watcher is expected to be a <em>serializable</em> dictionary
+object. Although not required, it is nice to pass in the <em>config</em> used for
+taking the snapshot so that the diffing function may run quick checks or use
+some metadata from it. As an example of snapshot returned from a watcher, here
+is the output from our <code class="docutils literal"><span class="pre">SchemaTables</span></code> example:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Output snapshot</span>
+<span class="p">{</span>
+  <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="s2">&quot;processed_tables&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;table_one_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;table_two_raw&quot;</span><span class="p">]),</span>
+           <span class="p">(</span><span class="s2">&quot;processed_tables&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;the_only_processed_table&quot;</span><span class="p">])]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Diffport core will now will save this snapshot in its store along with other
+snapshots collected from other watchers.</p>
+</div>
+<div class="section" id="diff">
+<h3><code class="docutils literal"><span class="pre">diff</span></code><a class="headerlink" href="#diff" title="Permalink to this headline">¶</a></h3>
+<p>The <code class="docutils literal"><span class="pre">diff</span></code> method of a watcher takes in two snapshots generated by its own
+<code class="docutils literal"><span class="pre">take_snapshot</span></code> method and returns an object representing the diff in those
+snapshots. As an example, consider that our <code class="docutils literal"><span class="pre">SchemaTables</span></code> watcher saved the
+following two snapshots at some points in time:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Snapshot old</span>
+<span class="n">old</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="s2">&quot;processed_tables&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;table_one_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;table_two_raw&quot;</span><span class="p">]),</span>
+           <span class="p">(</span><span class="s2">&quot;processed_tables&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;the_only_processed_table&quot;</span><span class="p">])]</span>
+<span class="p">}</span>
+
+<span class="c1"># Snapshot new</span>
+<span class="n">new</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="s2">&quot;processed_tables&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[(</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;table_one_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;table_two_raw&quot;</span><span class="p">,</span> <span class="s2">&quot;table_three_raw&quot;</span><span class="p">]),</span>
+           <span class="p">(</span><span class="s2">&quot;processed_tables&quot;</span><span class="p">,</span> <span class="p">[])]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>After finding the difference, the <code class="docutils literal"><span class="pre">diff</span></code> method might return a diff object
+like so (the current implementation actually does return this):</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="c1"># Diff output</span>
+<span class="p">{</span>
+  <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="s2">&quot;processed_tables&quot;</span><span class="p">],</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[[</span><span class="s2">&quot;raw_tables&quot;</span><span class="p">,</span> <span class="p">{</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="p">[],</span> <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;table_three_raw&quot;</span><span class="p">]</span> <span class="p">}],</span>
+           <span class="p">[</span><span class="s2">&quot;processed_tables&quot;</span><span class="p">,</span> <span class="p">{</span> <span class="s2">&quot;removed&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;the_only_processed_table&quot;</span><span class="p">],</span> <span class="s2">&quot;added&quot;</span><span class="p">:</span> <span class="p">[]</span> <span class="p">}]]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Notice that we also pass along the config. This is not required for this
+watcher, but some watchers (like <code class="docutils literal"><span class="pre">NumberOfRows</span></code>) use some information from
+config to generate the final report.</p>
+</div>
+<div class="section" id="report">
+<h3><code class="docutils literal"><span class="pre">report</span></code><a class="headerlink" href="#report" title="Permalink to this headline">¶</a></h3>
+<p>After a diff is calculated, the <code class="docutils literal"><span class="pre">report</span></code> function generates a string report
+for the diff. The reports from all the enabled watchers are concatenated and
+returned as the final report by diffport. For generating their own chunk of diff
+reports, watcher rely on jinja2 templates present in <code class="docutils literal"><span class="pre">templates.py</span></code>. The
+expected format of template is markdown since its easy to maintain and can be
+converted to other formats pretty easily using tools like <a class="reference external" href="http://pandoc.org/">pandoc</a>.</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">diffport</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="usage.html">Usage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Development</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#watchers">Watchers</a></li>
+</ul>
+</li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Reich Lab.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/development.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
