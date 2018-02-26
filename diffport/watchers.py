@@ -27,9 +27,10 @@ def items_common(a: SnapList, b: SnapList) -> Tuple[SnapList, SnapList]:
     n_a = []
     n_b = []
     for item_id, item_data in a:
-        if item_id in [row[0] for row in b]:
+        idx_b = py_.find_index(b, lambda x: x[0] == item_id)
+        if idx_b > -1:
             n_a.append((item_id, item_data))
-            n_b.append((item_id, b[[row[0] for row in b].index(item_id)][1]))
+            n_b.append((item_id, b[idx_b][1]))
 
     return (n_a, n_b)
 
@@ -39,11 +40,7 @@ def items_sub(a: SnapList, b: SnapList) -> SnapList:
     Return SnapItems from a which are not in b.
     """
 
-    out = []
-    for item_id, item_data in a:
-        if item_id not in [row[0] for row in b]:
-            out.append((item_id, item_data))
-    return out
+    return py_.difference_by(a, b, lambda x: x[0])
 
 
 class Watcher(ABC):
