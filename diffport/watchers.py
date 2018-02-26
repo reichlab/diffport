@@ -4,9 +4,9 @@ Modules for watchers
 
 from abc import ABC, abstractmethod
 from tabulate import tabulate
-from typing import Dict, List, Any, Tuple, Union
+from typing import Dict, List, Any, Tuple, Union, Callable
 from .templates import *
-from functools import reduce
+from functools import partial
 from copy import deepcopy
 from pydash import py_
 
@@ -14,7 +14,7 @@ from pydash import py_
 # A snapshot with config and snaplist
 SnapItem = Tuple[Union[str, List[str]], Any]
 SnapList = List[SnapItem]
-Snap = Dict[str, Union[SnapList, Dict]]
+Snap = Dict[str, Any]
 
 
 def items_common(a: SnapList, b: SnapList) -> Tuple[SnapList, SnapList]:
@@ -32,7 +32,7 @@ def items_common(a: SnapList, b: SnapList) -> Tuple[SnapList, SnapList]:
             n_a.append((item_id, item_data))
             n_b.append((item_id, b[idx_b][1]))
 
-    return (n_a, n_b)
+    return n_a, n_b
 
 
 def items_sub(a: SnapList, b: SnapList) -> SnapList:
@@ -41,6 +41,50 @@ def items_sub(a: SnapList, b: SnapList) -> SnapList:
     """
 
     return py_.difference_by(a, b, lambda x: x[0])
+
+
+def find_col_diff(col_data_old: SnapList, col_data_new: SnapList, diff_fn: Callable):
+    """
+    Return differences between columns using the diff_fn.
+
+    Parameters
+    ----------
+    col_data_old : SnapList
+        Tuple of two items. First is column grouping identifier, e.g. for a
+        table with grouping ['city', 'team'], this value might be
+        ['Sydney', 'Sydney Sixers']. Second item is (old) data for that grouping.
+    col_data_new : SnapList
+        Similar as col_data_old but from the new snapshot.
+    diff_fn : Callable(old, new)
+        Callable which returns an object representing difference between two
+        data as defined in the SnapLists above. It should also handle `None` as
+        parameter. It should return `None` for no diff.
+    """
+
+    output = [] # type: SnapList
+
+    # First work on the common items
+    common_old, common_new = items_common(col_data_old, col_data_new)
+    for old_col_set, new_col_set in zip(common_old, common_new):
+        diff = diff_fn(old_col_set[1], new_col_set[1])
+        if diff is not None:
+            output.append((old_col_set[0], diff))
+
+    # Now do only items which are only present in old data
+    only_removed = items_sub(col_data_old, col_data_new)
+    for col_set in only_removed:
+        diff = diff_fn(col_set[1], None)
+        if diff is not None:
+            output.append((col_set[0], diff))
+
+    # Finally do items which are only in new data
+    only_added = items_sub(col_data_new, col_data_old)
+    for col_set in only_added:
+        diff = diff_fn(None, col_set[1])
+        if diff is not None:
+            output.append((col_set[0], diff))
+
+    return output
 
 
 class Watcher(ABC):
@@ -98,8 +142,9 @@ class NumberOfRowsHash(Watcher):
                 for res in db.query(stmt):
                     group_values = [res[field] for field in table_config["groupby"]]
 
-                    if group_values in [gd[0] for gd in grouped_data]:
-                        grouped_data[[gd[0] for gd in grouped_data].index(group_values)][1].append(res["hash"])
+                    group_values_idx = py_.find_index(grouped_data, lambda x: x[0] == group_values)
+                    if group_values_idx > -1:
+                        grouped_data[group_values_idx][1].append(res["hash"])
                     else:
                         grouped_data.append([group_values, [res["hash"]]])
 
@@ -119,12 +164,17 @@ class NumberOfRowsHash(Watcher):
         old, new = items_common(old, new)
 
         def _get_diff(old_hashes, new_hashes, skip=False):
-            removed = len(set(old_hashes) - set(new_hashes))
-            added = len(set(new_hashes) - set(old_hashes))
-            if skip and (removed == added == 0):
-                return None
+            if old_hashes is None:
+                return { "removed": 0, "added": len(set(new_hashes)) }
+            elif new_hashes is None:
+                return { "removed": len(set(old_hashes)), "added": 0 }
             else:
-                return {"removed": removed, "added": added}
+                removed = len(set(old_hashes) - set(new_hashes))
+                added = len(set(new_hashes) - set(old_hashes))
+                if skip and (removed == added == 0):
+                    return None
+                else:
+                    return { "removed": removed, "added": added }
 
         output = [] # type: Any
         for row_old, row_new in zip(old, new):
@@ -134,25 +184,7 @@ class NumberOfRowsHash(Watcher):
                 output.append([row_old[0], diff, "basic"])
             else:
                 # This is grouped data, each row_old/new[1] is like [[grouped-cols, ...], [hashes]]
-                old_set, new_set = items_common(row_old[1], row_new[1])
-                col_set_diff = [] # type: SnapList
-                for old_col_set, new_col_set in zip(old_set, new_set):
-                    diff = _get_diff(old_col_set[1], new_col_set[1], skip=True)
-                    if diff is not None:
-                        col_set_diff.append((old_col_set[0], diff))
-
-                only_removed = items_sub(row_old[1], row_new[1])
-                for col_set in only_removed:
-                    diff = _get_diff(col_set[1], [], skip=True)
-                    if diff is not None:
-                        col_set_diff.append((col_set[0], diff))
-
-                only_added = items_sub(row_new[1], row_old[1])
-                for col_set in only_added:
-                    diff = _get_diff([], col_set[1], skip=True)
-                    if diff is not None:
-                        col_set_diff.append((col_set[0], diff))
-
+                col_set_diff = find_col_diff(row_old[1], row_new[1], partial(_get_diff, skip=True))
                 output.append([row_old[0], col_set_diff, "grouped"])
 
         return {
@@ -229,33 +261,24 @@ class NumberOfRows(Watcher):
         old, new = old_snap["data"], new_snap["data"]
         old, new = items_common(old, new)
 
+        def _get_diff(old_counts, new_counts):
+            if old_counts is None:
+                return new_counts
+            elif new_counts is None:
+                return -old_counts
+            else:
+                diff = new_counts - old_counts
+                return None if diff == 0 else diff
+
         output = [] # type: Any
         for row_old, row_new in zip(old, new):
             if type(row_old[1]) == int:
                 # This data is without grouping, each row_old/new[1] is a direct count
-                diff = row_new[1] - row_old[1]
+                diff = _get_diff(row_old[1], row_new[1])
                 output.append([row_old[0], diff, "basic"])
             else:
                 # This is grouped data, each row_old/new[1] is like [[grouped-cols, ...], count]
-                old_set, new_set = items_common(row_old[1], row_new[1])
-                col_set_diff = [] # type: SnapList
-                for old_col_set, new_col_set in zip(old_set, new_set):
-                    diff = new_col_set[1] - old_col_set[1]
-                    if diff != 0:
-                        col_set_diff.append((old_col_set[0], diff))
-
-                only_removed = items_sub(row_old[1], row_new[1])
-                for col_set in only_removed:
-                    diff = -col_set[1]
-                    if diff != 0:
-                        col_set_diff.append((col_set[0], diff))
-
-                only_added = items_sub(row_new[1], row_old[1])
-                for col_set in only_added:
-                    diff = col_set[1]
-                    if diff != 0:
-                        col_set_diff.append((col_set[0], diff))
-
+                col_set_diff = find_col_diff(row_old[1], row_new[1], _get_diff)
                 output.append([row_old[0], col_set_diff, "grouped"])
 
         return {
