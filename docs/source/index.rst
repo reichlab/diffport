@@ -235,4 +235,28 @@ only need to watch for the schema ``raw_tables`` use the following config::
 Development
 -----------
 
-TODO
+Diffport involves the following units:
+
+1. *Command line interface*. The code for this is in file ``cli.py``.
+2. *Core* module which reads config and delegates tasks to watchers. This is in
+   the file ``core.py``.
+3. *Store* is an abstraction over the area where diffport is going to save
+   snapshots. Its defined in ``store.py``. Adding new store here means adding
+   another class inheriting from ``Store`` abstract class. As an example, see
+   the class ``StoreDirectory`` which keeps snapshots in a directory.
+4. *DB connection*. A few functions related to database connection are in
+   ``connection.py``.
+5. *Watchers*. Actual watchers are defined in ``watchers.py`` along with their
+   report templates in ``templates.py``. We will dissect watchers in more
+   details later.
+
+Watchers
+~~~~~~~~
+
+Hello world
+
+
+1. Watcher isolation
+2. Watcher ABC
+3. Ingestion & return types
+4. Templates
